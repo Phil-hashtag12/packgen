@@ -687,13 +687,15 @@
     let poolData = [], packData = [], allTopics = {};
     let activeTopicFilter = "all";
     let authToken = localStorage.getItem("pg_token") || "";
-    let pgKey     = localStorage.getItem("pg_key")   || "";   // PackGen API key
+    let pgKey     = localStorage.getItem("pg_key")   || "";
     let authUser  = null;
-    let authMode  = "signin";   // or "signup"
-    let selectedSubtopics = {};  // {topic: Set<subtopic>}
+    let authMode  = "signin";
+    let selectedSubtopics = {};
     let previewCache = {};
     let previewTimer = null;
     let authEnabled = false;
+    let supabaseUrl  = "";   // cached from /api/config
+    let supabaseAnon = "";   // cached from /api/config
 
     // ── apiFetch — attaches X-PackGen-Key to every request ───────────────────
     function apiFetch(url, options = {}) {
@@ -705,13 +707,15 @@
     // ── Init ──────────────────────────────────────────────────────────────────
     async function init() {
       const cfg = await (await fetch("/api/config")).json();
-      authEnabled = cfg.auth_enabled;
+      authEnabled  = cfg.auth_enabled;
+      supabaseUrl  = (cfg.supabase_url  || "").replace(/\/$/, "");  // strip trailing slash
+      supabaseAnon = cfg.supabase_anon  || "";
 
       // Restore session if token still valid
       if (authToken && authEnabled) {
         try {
-          const r = await fetch(`${cfg.supabase_url}/auth/v1/user`, {
-            headers: { "apikey": cfg.supabase_anon, "Authorization": `Bearer ${authToken}` }
+          const r = await fetch(`${supabaseUrl}/auth/v1/user`, {
+            headers: { "apikey": supabaseAnon, "Authorization": `Bearer ${authToken}` }
           });
           if (r.ok) authUser = await r.json();
           else { authToken = ""; localStorage.removeItem("pg_token"); }
@@ -751,25 +755,25 @@
       const pw2   = document.getElementById("auth-password2").value;
       const errEl = document.getElementById("auth-error");
       const btn   = document.getElementById("auth-submit-btn");
-      const cfg   = await (await fetch("/api/config")).json();
-      const SUPABASE_URL  = cfg.supabase_url;
-      const SUPABASE_ANON = cfg.supabase_anon;
 
       errEl.textContent = "";
       if (!email || !pw) { errEl.textContent = "Please enter email and password."; return; }
       if (authMode === "signup" && pw !== pw2) { errEl.textContent = "Passwords don't match."; return; }
+      if (!supabaseUrl || !supabaseAnon) {
+        errEl.textContent = "Auth not configured — check Supabase env vars."; return;
+      }
 
       btn.textContent = authMode === "signin" ? "Signing in…" : "Creating account…";
       btn.disabled = true;
 
       const endpoint = authMode === "signin"
-        ? `${SUPABASE_URL}/auth/v1/token?grant_type=password`
-        : `${SUPABASE_URL}/auth/v1/signup`;
+        ? `${supabaseUrl}/auth/v1/token?grant_type=password`
+        : `${supabaseUrl}/auth/v1/signup`;
 
       try {
         const r = await fetch(endpoint, {
           method: "POST",
-          headers: { "apikey": SUPABASE_ANON, "Content-Type": "application/json" },
+          headers: { "apikey": supabaseAnon, "Content-Type": "application/json" },
           body: JSON.stringify({ email, password: pw }),
         });
         const d = await r.json();
@@ -780,7 +784,6 @@
           localStorage.setItem("pg_token", authToken);
 
           if (authMode === "signup") {
-            // New user — provision a PackGen key and store it
             btn.textContent = "Generating your API key…";
             try {
               const kr = await fetch("/api/user/provision-key", {
@@ -796,17 +799,20 @@
               console.warn("Could not provision PackGen key:", e);
             }
           } else {
-            // Returning user — key already in localStorage from signup
             pgKey = localStorage.getItem("pg_key") || "";
           }
 
           showScreen("screen-upload");
           setProgress(0.15);
         } else {
-          errEl.textContent = d.error_description || d.msg || "Authentication failed.";
+          // Surface a useful error message
+          const msg = d.error_description || d.msg || d.message || d.error || "Authentication failed.";
+          errEl.textContent = msg;
+          console.error("Auth error response:", d);
         }
       } catch (e) {
-        errEl.textContent = "Network error. Please try again.";
+        errEl.textContent = "Network error — check your connection.";
+        console.error("Auth network error:", e);
       }
 
       btn.textContent = authMode === "signin" ? "Sign In" : "Create Account";
