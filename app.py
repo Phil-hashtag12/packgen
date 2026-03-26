@@ -413,6 +413,9 @@ def heatmap(jid):
 def generate(jid):
     data = request.json or {}
 
+    # Capture user_id from request context before entering the thread
+    _user_id_for_generate = g.job.get("user_id") if g.job else None
+
     def run():
         update_job(jid, status="generating", progress=0, message="Building packs…")
         pool = get_live_pool(jid)
@@ -420,7 +423,7 @@ def generate(jid):
             update_job(jid, status="error", message="No questions — extract first."); return
 
         # Spaced repetition: apply weakness weights if user has score data
-        user_id = g.job.get("user_id") if g.job else None
+        user_id = _user_id_for_generate
         weights = None
         if user_id and data.get("spaced_repetition", False):
             weights = weakness_weights(user_id, pool)
@@ -496,7 +499,7 @@ def custom_pack(jid):
         return jsonify({"error": "No questions match difficulty filter."}), 400
 
     # Spaced repetition weighting
-    user_id = g.job.get("user_id") if g.job else None
+    user_id = get_job(jid).get("user_id") if job_exists(jid) else None
     if use_sr and user_id:
         weights = weakness_weights(user_id, candidates)
         import random
