@@ -292,13 +292,13 @@
     /* Progress pill */
     #progress-wrap {
       position: fixed;
-      top: var(--safe-top);
-      left: 50%;
-      transform: translateX(-50%);
+      left: 0;
+      right: 0;
+      bottom: 0;
       z-index: 60;
-      width: 200px;
-      height: 4px;
-      border-radius: 2px;
+      width: 100%;
+      height: 6px;
+      border-radius: 0;
       background: rgba(0, 0, 0, 0.10);
       overflow: hidden;
       transition: opacity 300ms var(--spring-snappy)
@@ -1955,7 +1955,7 @@
 
     <!-- Upload -->
     <div id="screen-upload"
-      style="display:none;width:100%;max-width:390px;padding:0 24px;overflow-y:auto;max-height:100vh;padding-top:20px;flex-direction:column;align-items:stretch">
+      style="display:none;width:100%;max-width:390px;padding:0 24px;padding-top:20px;flex-direction:column;align-items:stretch">
       <div style="text-align:center;margin-bottom:28px">
         <div style="font-size:28px;font-weight:700;letter-spacing:-0.3px;color:var(--text-primary);margin-bottom:8px">
           Upload your papers</div>
@@ -1993,7 +1993,7 @@
 
     <!-- Pipeline -->
     <div id="screen-pipeline"
-      style="display:none;width:100%;max-width:390px;padding:0 24px;overflow-y:auto;max-height:100vh">
+      style="display:none;width:100%;max-width:390px;padding:0 24px">
       <div style="text-align:center;margin-bottom:24px;padding-top:20px">
         <div id="pipeline-headline"
           style="font-size:28px;font-weight:700;letter-spacing:-0.3px;color:var(--text-primary);margin-bottom:8px">
@@ -2633,11 +2633,17 @@
         activateStep("generate");
         document.getElementById("pipeline-headline").textContent = "Building packs…";
         document.getElementById("pipeline-sub").textContent = "Assembling ~100-mark practice papers";
+        console.log("[PackGen] Step 4 generate request", {
+          jobId,
+          payload: { balance_topics: true, diff_filter: [1, 5] }
+        });
         await apiFetch(`/api/generate/${jobId}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ balance_topics: true, diff_filter: [1, 5] }) });
         const generateResult = await pollStep("generating", "generate", "bar-generate", "msg-generate", 0.85, 1.0);
+        console.log("[PackGen] Step 4 generate result", generateResult);
         ensureStepSucceeded(generateResult, "Pack generation failed");
 
         const s = await (await apiFetch(`/api/status/${jobId}`)).json();
+        console.log("[PackGen] Step 4 final status", s);
         packData = s.pack_files || [];
         if (!packData.length) {
           throw new Error("Pack generation completed with no output files.");
@@ -2671,6 +2677,15 @@
         const DONE = ["extracted", "classified", "done", "error"];
         const timer = setInterval(async () => {
           const d = await (await apiFetch(`/api/status/${jobId}`)).json();
+          if (stepId === "generate") {
+            console.log("[PackGen] Step 4 polling", {
+              status: d.status,
+              progress: d.progress,
+              message: d.message,
+              warnings: d.warnings || [],
+              pack_count: (d.pack_files || []).length,
+            });
+          }
           const pct = d.progress || 0;
           const mapped = fromPct + (toPct - fromPct) * (pct / 100);
           setBar(stepId, pct); setMsg(stepId, d.message || ""); setProgress(mapped);
