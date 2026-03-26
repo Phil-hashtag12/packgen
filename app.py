@@ -324,13 +324,14 @@ def classify(jid):
     data = request.json or {}
     job  = g.job
 
-    # Resolve AI key: user profile → request body → env (Anthropic or OpenRouter)
+    # Resolve AI key: request body (BYO) → user profile → env (Anthropic/OpenRouter)
     ai_key = ""
-    if job.get("user_id"):
-        profile = get_user_profile(job["user_id"])
-        ai_key  = profile.get("anthropic_api_key", "").strip()
     if not ai_key:
         ai_key = data.get("api_key", "").strip()
+    if job.get("user_id"):
+        profile = get_user_profile(job["user_id"])
+        if not ai_key:
+            ai_key = profile.get("anthropic_api_key", "").strip()
     if not ai_key:
         ai_key = (os.environ.get("OPENROUTER_API_KEY", "") or
                   os.environ.get("ANTHROPIC_API_KEY", ""))
@@ -742,8 +743,9 @@ def save_session(jid):
         "jid": jid, "pool": pool_to_session(pool),
         "warnings": job.get("warnings", []),
         "classified": job.get("classified", False),
-        "pack_files": [{k: v for k, v in pf.items() if k != "questions"}
-                       for pf in job.get("pack_files", [])],
+        # Keep full pack metadata so LLM context and analytics still work
+        # after restoring from a cached session.
+        "pack_files": job.get("pack_files", []),
     }
     path = SESSION_DIR / f"{jid}.json"
     path.write_text(json.dumps(session, indent=2))
@@ -803,6 +805,7 @@ def load_session(filename):
         set_job_docs(jid, open_docs, pool)
         update_job(jid, status="classified" if classified else "extracted",
                    pool=pool, classified=classified,
+                   pack_files=data.get("pack_files", []),
                    warnings=data.get("warnings", []),
                    message=f"Loaded {len(pool)} questions from session.")
         return jsonify({"job_id": jid, "questions": len(pool),
@@ -827,8 +830,14 @@ def llm_context(jid, pack_num):
     if not pool:
         return jsonify({"error": "Pool is empty"}), 404
 
-    pack_ids = {(q["key"], q["q"]) for q in pack_meta["questions"]}
-    order    = {(q["key"], q["q"]): i for i, q in enumerate(pack_meta["questions"])}
+    pack_questions = pack_meta.get("questions", [])
+    if not pack_questions:
+        return jsonify({
+            "error": "This pack is missing question mapping. Regenerate packs once, then copy context again."
+        }), 400
+
+    pack_ids = {(q["key"], q["q"]) for q in pack_questions}
+    order    = {(q["key"], q["q"]): i for i, q in enumerate(pack_questions)}
     pack_qs  = sorted([q for q in pool if (q["key"], q["q"]) in pack_ids],
                       key=lambda q: order.get((q["key"], q["q"]), 999))
 

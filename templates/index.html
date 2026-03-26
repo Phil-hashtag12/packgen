@@ -336,12 +336,12 @@
     }
 
     .step-card {
-      border-radius: 20px;
-      padding: 20px;
+      border-radius: 16px;
+      padding: 14px 16px;
       transition: all 400ms var(--spring-default);
       overflow: hidden;
       position: relative;
-      margin-bottom: 12px
+      margin-bottom: 8px
     }
 
     .step-header {
@@ -381,14 +381,14 @@
     }
 
     .step-title {
-      font-size: 17px;
+      font-size: 15px;
       font-weight: 600;
       letter-spacing: -0.41px;
       color: var(--text-primary)
     }
 
     .step-sub {
-      font-size: 13px;
+      font-size: 12px;
       font-weight: 400;
       letter-spacing: -0.08px;
       color: var(--text-secondary);
@@ -396,7 +396,7 @@
     }
 
     .step-body {
-      margin-top: 16px;
+      margin-top: 10px;
       display: none
     }
 
@@ -1982,6 +1982,8 @@
       </div>
       <div style="margin-top:20px;display:flex;flex-direction:column;gap:10px">
         <button class="cta-btn primary" id="btn-start" onclick="startPipeline()" disabled>Begin</button>
+        <button class="cta-btn glass-btn" id="btn-resume-last" onclick="resumeLatestSession(this)"
+          style="font-size:15px;display:none">Resume Last Cached Session</button>
         <button class="cta-btn glass-btn" id="btn-load-session" onclick="openSessionPicker()"
           style="font-size:15px">Load Saved Session</button>
       </div>
@@ -2407,6 +2409,7 @@
     let authEnabled = false;
     let supabaseUrl = "";   // cached from /api/config
     let supabaseAnon = "";   // cached from /api/config
+    let latestSessionFilename = "";
 
     // ── apiFetch — attaches X-PackGen-Key to every request ───────────────────
     function apiFetch(url, options = {}) {
@@ -2450,6 +2453,22 @@
       jobId = (await r.json()).job_id;
       const t = await fetch("/api/topics");
       allTopics = (await t.json()).topics;
+
+      try {
+        const s = await (await apiFetch("/api/session/list")).json();
+        const sessions = s.sessions || [];
+        if (sessions.length) {
+          latestSessionFilename = sessions[0].filename;
+          const b = document.getElementById("btn-resume-last");
+          if (b) {
+            b.style.display = "block";
+            b.textContent = `Resume Last Cached Session (${sessions[0].questions}q)`;
+            b.dataset.filename = latestSessionFilename;
+          }
+        }
+      } catch (e) {
+        console.warn("Could not check cached sessions:", e);
+      }
     }
 
     // ── Auth ──────────────────────────────────────────────────────────────────
@@ -2501,10 +2520,12 @@
           body: JSON.stringify({ email, password: pw }),
         });
         const d = await r.json();
+        const token = d.access_token || d.session?.access_token || "";
+        const userObj = d.user || d.session?.user || null;
 
-        if (d.access_token) {
-          authToken = d.access_token;
-          authUser = d.user;
+        if (token) {
+          authToken = token;
+          authUser = userObj;
           localStorage.setItem("pg_token", authToken);
 
           if (authMode === "signup") {
@@ -2528,6 +2549,10 @@
 
           showScreen("screen-upload");
           setProgress(0.15);
+        } else if (authMode === "signup" && d.user && !token) {
+          errEl.textContent = "Account created. Check your email to confirm, then sign in.";
+          switchAuthTab("signin");
+          document.getElementById("auth-email").value = email;
         } else {
           // Surface a useful error message
           const msg = d.error_description || d.msg || d.message || d.error || "Authentication failed.";
@@ -2662,6 +2687,11 @@
           throw new Error("Pack generation completed with no output files.");
         }
         doneStep("generate"); setProgress(1.0);
+        try {
+          await apiFetch(`/api/session/save/${jobId}`, { method: "POST" });
+        } catch (e) {
+          console.warn("Auto-save session failed:", e);
+        }
         setTimeout(() => revealApp(), 600);
       } catch (err) {
         alert(err?.message || "Pipeline failed. Check warnings and try again.");
@@ -3027,6 +3057,7 @@
             <path d="M18 16v4M16 18h4" stroke="rgba(175,82,222,0.9)" stroke-width="1.5"/>`;
         }, 2500);
       } catch (e) {
+        console.error("[PackGen] Copy context failed:", e);
         tip.textContent = "Copy failed — try again";
         tip.style.opacity = "1";
         setTimeout(() => { tip.style.opacity = ""; tip.textContent = "Copy context for AI" }, 2500);
@@ -3099,6 +3130,11 @@
           throw new Error("No packs were generated. Check warnings and try again.");
         }
         renderPacks(packData);
+        try {
+          await apiFetch(`/api/session/save/${jobId}`, { method: "POST" });
+        } catch (e) {
+          console.warn("Auto-save session failed:", e);
+        }
         switchTab("packs", document.getElementById("tab-packs"));
       } catch (err) {
         alert(err?.message || "Pack regeneration failed.");
@@ -3304,6 +3340,15 @@
           </div>
           <button onclick="loadSession('${s.filename}')" style="padding:6px 14px;border-radius:20px;background:rgba(30,30,30,0.85);color:white;border:none;font-size:12px;font-weight:600;cursor:pointer">Load</button>
         </div>`).join("");
+    }
+
+    async function resumeLatestSession(btn) {
+      const filename = (btn && btn.dataset && btn.dataset.filename) || latestSessionFilename;
+      if (!filename) {
+        await openSessionPicker();
+        return;
+      }
+      await loadSession(filename);
     }
 
     async function loadSession(filename) {
