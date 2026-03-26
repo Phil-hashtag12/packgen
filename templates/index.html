@@ -2549,7 +2549,7 @@
 
           showScreen("screen-upload");
           setProgress(0.15);
-        } else if (authMode === "signup" && d.user && !token) {
+        } else if (authMode === "signup" && (d.user || d.email) && !token) {
           errEl.textContent = "Account created. Check your email to confirm, then sign in.";
           switchAuthTab("signin");
           document.getElementById("auth-email").value = email;
@@ -3027,9 +3027,16 @@
         const text = d.markdown;
 
         // Modern clipboard API
+        let copied = false;
         if (navigator.clipboard && navigator.clipboard.writeText) {
-          await navigator.clipboard.writeText(text);
-        } else {
+          try {
+            await navigator.clipboard.writeText(text);
+            copied = true;
+          } catch (clipErr) {
+            console.warn("[PackGen] Clipboard API blocked, falling back:", clipErr);
+          }
+        }
+        if (!copied) {
           // Fallback: textarea trick
           const ta = document.createElement("textarea");
           ta.value = text;
@@ -3039,7 +3046,7 @@
           ta.select();
           const ok = document.execCommand("copy");
           document.body.removeChild(ta);
-          if (!ok) throw new Error("execCommand failed");
+          if (!ok) throw new Error("Clipboard copy blocked by browser");
         }
 
         btn.classList.add("copied");

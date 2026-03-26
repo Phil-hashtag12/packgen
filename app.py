@@ -337,39 +337,54 @@ def classify(jid):
                   os.environ.get("ANTHROPIC_API_KEY", ""))
 
     def run():
-        pool        = get_live_pool(jid)
-        current_job = get_job(jid)
-        if current_job.get("classified") and not data.get("force"):
+        try:
+            pool        = get_live_pool(jid)
+            current_job = get_job(jid)
+            if current_job.get("classified") and not data.get("force"):
+                update_job(jid, status="classified", progress=100,
+                           message=f"Using {len(pool)} cached classifications."); return
+            user_id = current_job.get("user_id")
+            if user_id and os.environ.get("SUPABASE_URL"):
+                profile = get_user_profile(user_id)
+                allowed, used, quota = check_quota(profile)
+                if not allowed:
+                    update_job(jid, status="error",
+                               message=f"Quota reached ({used}/{quota}). Upgrade to Pro."); return
+            update_job(jid, status="classifying", progress=0, message="Classifying…")
+            spec_text = ""
+            spec_path = UPLOAD_DIR / jid / "__spec__.pdf"
+            if spec_path.exists():
+                try:
+                    import fitz
+                    doc = fitz.open(str(spec_path))
+                    spec_text = "\n".join(doc[i].get_text()
+                                          for i in range(min(doc.page_count, 20)))
+                    doc.close()
+                except Exception: pass
+            def prog(done, total, msg):
+                update_job(jid, progress=int(done / total * 100), message=msg)
+            classify_batch(pool, api_key=ai_key, spec_text=spec_text, progress_cb=prog)
+
+            classified_count = sum(1 for q in pool if (q.get("topic") or "Unknown") != "Unknown")
+            if pool and classified_count == 0:
+                update_job(
+                    jid,
+                    status="error",
+                    progress=100,
+                    message="Classification failed: provider returned no usable labels. Check your API key/backend and try again.",
+                )
+                return
+
+            if user_id:
+                increment_usage(user_id, len(pool))
+            set_job_docs(jid, [], pool)
             update_job(jid, status="classified", progress=100,
-                       message=f"Using {len(pool)} cached classifications."); return
-        user_id = current_job.get("user_id")
-        if user_id and os.environ.get("SUPABASE_URL"):
-            profile = get_user_profile(user_id)
-            allowed, used, quota = check_quota(profile)
-            if not allowed:
-                update_job(jid, status="error",
-                           message=f"Quota reached ({used}/{quota}). Upgrade to Pro."); return
-        update_job(jid, status="classifying", progress=0, message="Classifying…")
-        spec_text = ""
-        spec_path = UPLOAD_DIR / jid / "__spec__.pdf"
-        if spec_path.exists():
-            try:
-                import fitz
-                doc = fitz.open(str(spec_path))
-                spec_text = "\n".join(doc[i].get_text()
-                                      for i in range(min(doc.page_count, 20)))
-                doc.close()
-            except Exception: pass
-        def prog(done, total, msg):
-            update_job(jid, progress=int(done / total * 100), message=msg)
-        classify_batch(pool, api_key=ai_key, spec_text=spec_text, progress_cb=prog)
-        if user_id:
-            increment_usage(user_id, len(pool))
-        set_job_docs(jid, [], pool)
-        update_job(jid, status="classified", progress=100,
-                   message=f"Classified {len(pool)} questions.",
-                   pool=pool, classified=True)
-        log.info("Job %s: classified %d questions", jid, len(pool))
+                       message=f"Classified {len(pool)} questions.",
+                       pool=pool, classified=True)
+            log.info("Job %s: classified %d questions", jid, len(pool))
+        except Exception as e:
+            log.exception("Job %s: classify failed", jid)
+            update_job(jid, status="error", progress=100, message=f"Classification failed: {e}")
     threading.Thread(target=run, daemon=True, name=f"classify-{jid}").start()
     return jsonify({"started": True})
 

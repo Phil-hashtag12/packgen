@@ -245,6 +245,8 @@ def classify_batch(questions: list, api_key: str = "", spec_text: str = "",
     """
     total = len(questions)
     classified = 0
+    api_failures = 0
+    api_success = 0
 
     # Cache pass
     to_classify = []
@@ -274,9 +276,11 @@ def classify_batch(questions: list, api_key: str = "", spec_text: str = "",
             )
             _apply(batch, _parse_json_array(raw))
             _cache_batch(batch)
+            api_success += 1
         except Exception as e:
             log.error("Text batch classify error: %s", e)
             _default_batch(batch)
+            api_failures += 1
         classified += len(batch)
         if progress_cb:
             progress_cb(classified, total, f"Classified {classified}/{total}…")
@@ -299,9 +303,11 @@ def classify_batch(questions: list, api_key: str = "", spec_text: str = "",
                 )
                 _apply(text_ok, _parse_json_array(raw))
                 _cache_batch(text_ok)
+                api_success += 1
             except Exception as e:
                 log.error("Vision-text batch error: %s", e)
                 _default_batch(text_ok)
+                api_failures += 1
             time.sleep(0.2)
 
         # Diagram-heavy — vision single call
@@ -340,16 +346,21 @@ def classify_batch(questions: list, api_key: str = "", spec_text: str = "",
                 q["difficulty"] = _safe_int(r.get("d") or r.get("difficulty"), 3)
                 _CACHE[_q_hash(q)] = {"topic": q["topic"], "subtopic": q["subtopic"],
                                        "difficulty": q["difficulty"]}
+                api_success += 1
             except Exception as e:
                 log.error("Vision single error Q%s: %s", q.get("q"), e)
                 q.setdefault("topic", "Unknown")
                 q.setdefault("subtopic", "Unknown")
                 q.setdefault("difficulty", 3)
+                api_failures += 1
             time.sleep(0.8)
 
         classified += len(batch)
         if progress_cb:
             progress_cb(classified, total, f"Classified {classified}/{total}…")
+
+    if to_classify and api_success == 0 and api_failures > 0:
+        raise RuntimeError("All classification API calls failed. Check API key, backend settings, and provider availability.")
 
     return questions
 
