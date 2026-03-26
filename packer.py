@@ -101,6 +101,12 @@ def make_packs(pool, seed=None, topic_filter=None, difficulty_filter=None,
             overflow.append(slot)
 
     overflow_qs = [q for s in overflow for q in s]
+    if not final_packs and overflow_qs:
+        # If total available marks are below the normal minimum threshold,
+        # still return a usable pack instead of failing the entire run.
+        final_packs = [overflow_qs]
+        overflow_qs = []
+
     for q in overflow_qs:
         placed = False
         for pack in final_packs:
