@@ -421,6 +421,18 @@ def generate(jid):
         pool = get_live_pool(jid)
         if not pool:
             update_job(jid, status="error", message="No questions — extract first."); return
+        log.info(
+            "Job %s: starting generation with %d questions (%d marks), filters=%s",
+            jid,
+            len(pool),
+            sum(q.get("marks", 0) for q in pool),
+            {
+                "topic_filter": data.get("topic_filter"),
+                "diff_filter": data.get("diff_filter"),
+                "balance_topics": data.get("balance_topics", True),
+                "spaced_repetition": data.get("spaced_repetition", False),
+            },
+        )
 
         # Spaced repetition: apply weakness weights if user has score data
         user_id = _user_id_for_generate
@@ -436,8 +448,15 @@ def generate(jid):
             balance_topics=data.get("balance_topics", True),
             weights=weights,
         )
+        log.info("Job %s: make_packs returned %d pack(s)", jid, len(packs))
         if not packs:
-            update_job(jid, status="error", message="No packs with current filters."); return
+            update_job(
+                jid,
+                status="error",
+                message=f"No packs with current filters. "
+                        f"Questions={len(pool)}, Marks={sum(q.get('marks', 0) for q in pool)}.",
+            )
+            return
 
         out_dir = OUTPUT_DIR / jid
         out_dir.mkdir(exist_ok=True)
