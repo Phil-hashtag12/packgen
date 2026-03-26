@@ -283,7 +283,11 @@ def upload_files(jid):
             spec.save(str(UPLOAD_DIR / jid / "__spec__.pdf"))
         except ValueError:
             errors.append("Spec filename rejected")
-    pairs, warnings = find_pairs(UPLOAD_DIR / jid)
+    try:
+        pairs, warnings = find_pairs(UPLOAD_DIR / jid)
+    except Exception as e:
+        log.exception("Job %s: pair detection failed", jid)
+        return jsonify({"error": f"Pair detection failed: {e}"}), 500
     return jsonify({"saved": saved, "pairs_found": len(pairs),
                     "pair_names": [p[0] for p in pairs],
                     "warnings": warnings + errors})
@@ -293,19 +297,23 @@ def upload_files(jid):
 @require_job
 def extract(jid):
     def run():
-        update_job(jid, status="extracting", progress=0,
-                   message="Finding pairs…", warnings=[])
-        pairs, warnings = find_pairs(UPLOAD_DIR / jid)
-        if not pairs:
-            update_job(jid, status="error",
-                       message="No matched QP/MS pairs found."); return
-        def prog(i, n, msg):
-            update_job(jid, progress=int(i / n * 90), message=msg)
-        pool, open_docs, w2 = build_question_pool(pairs, progress_cb=prog)
-        set_job_docs(jid, open_docs, pool)
-        update_job(jid, status="extracted", progress=100,
-                   message=f"Extracted {len(pool)} questions from {len(pairs)} papers.",
-                   warnings=warnings + w2, pool=pool, classified=False)
+        try:
+            update_job(jid, status="extracting", progress=0,
+                       message="Finding pairs…", warnings=[])
+            pairs, warnings = find_pairs(UPLOAD_DIR / jid)
+            if not pairs:
+                update_job(jid, status="error",
+                           message="No matched QP/MS pairs found."); return
+            def prog(i, n, msg):
+                update_job(jid, progress=int(i / n * 90), message=msg)
+            pool, open_docs, w2 = build_question_pool(pairs, progress_cb=prog)
+            set_job_docs(jid, open_docs, pool)
+            update_job(jid, status="extracted", progress=100,
+                       message=f"Extracted {len(pool)} questions from {len(pairs)} papers.",
+                       warnings=warnings + w2, pool=pool, classified=False)
+        except Exception as e:
+            log.exception("Job %s: extraction failed", jid)
+            update_job(jid, status="error", progress=100, message=f"Extraction failed: {e}")
     threading.Thread(target=run, daemon=True, name=f"extract-{jid}").start()
     return jsonify({"started": True})
 
@@ -600,6 +608,8 @@ def custom_pack(jid):
 @require_job
 def status(jid):
     j = get_job(jid)
+    if not j:
+        return jsonify({"error": "Job state unavailable"}), 404
     return jsonify({
         "status": j["status"], "progress": j["progress"],
         "message": j["message"], "warnings": j.get("warnings", []),
