@@ -283,7 +283,11 @@ def upload_files(jid):
             spec.save(str(UPLOAD_DIR / jid / "__spec__.pdf"))
         except ValueError:
             errors.append("Spec filename rejected")
-    pairs, warnings = find_pairs(UPLOAD_DIR / jid)
+    try:
+        pairs, warnings = find_pairs(UPLOAD_DIR / jid)
+    except Exception as e:
+        log.exception("Job %s: pair detection failed", jid)
+        return jsonify({"error": f"Pair detection failed: {e}"}), 500
     return jsonify({"saved": saved, "pairs_found": len(pairs),
                     "pair_names": [p[0] for p in pairs],
                     "warnings": warnings + errors})
@@ -293,19 +297,23 @@ def upload_files(jid):
 @require_job
 def extract(jid):
     def run():
-        update_job(jid, status="extracting", progress=0,
-                   message="Finding pairs…", warnings=[])
-        pairs, warnings = find_pairs(UPLOAD_DIR / jid)
-        if not pairs:
-            update_job(jid, status="error",
-                       message="No matched QP/MS pairs found."); return
-        def prog(i, n, msg):
-            update_job(jid, progress=int(i / n * 90), message=msg)
-        pool, open_docs, w2 = build_question_pool(pairs, progress_cb=prog)
-        set_job_docs(jid, open_docs, pool)
-        update_job(jid, status="extracted", progress=100,
-                   message=f"Extracted {len(pool)} questions from {len(pairs)} papers.",
-                   warnings=warnings + w2, pool=pool, classified=False)
+        try:
+            update_job(jid, status="extracting", progress=0,
+                       message="Finding pairs…", warnings=[])
+            pairs, warnings = find_pairs(UPLOAD_DIR / jid)
+            if not pairs:
+                update_job(jid, status="error",
+                           message="No matched QP/MS pairs found."); return
+            def prog(i, n, msg):
+                update_job(jid, progress=int(i / n * 90), message=msg)
+            pool, open_docs, w2 = build_question_pool(pairs, progress_cb=prog)
+            set_job_docs(jid, open_docs, pool)
+            update_job(jid, status="extracted", progress=100,
+                       message=f"Extracted {len(pool)} questions from {len(pairs)} papers.",
+                       warnings=warnings + w2, pool=pool, classified=False)
+        except Exception as e:
+            log.exception("Job %s: extraction failed", jid)
+            update_job(jid, status="error", progress=100, message=f"Extraction failed: {e}")
     threading.Thread(target=run, daemon=True, name=f"extract-{jid}").start()
     return jsonify({"started": True})
 
@@ -333,6 +341,14 @@ def classify(jid):
         if current_job.get("classified") and not data.get("force"):
             update_job(jid, status="classified", progress=100,
                        message=f"Using {len(pool)} cached classifications."); return
+        if not ai_key.strip():
+            update_job(
+                jid,
+                status="error",
+                progress=100,
+                message="No AI key configured. Add your Anthropic key in Account or set OPENROUTER_API_KEY/ANTHROPIC_API_KEY on server.",
+            )
+            return
         user_id = current_job.get("user_id")
         if user_id and os.environ.get("SUPABASE_URL"):
             profile = get_user_profile(user_id)
@@ -421,6 +437,18 @@ def generate(jid):
         pool = get_live_pool(jid)
         if not pool:
             update_job(jid, status="error", message="No questions — extract first."); return
+        log.info(
+            "Job %s: starting generation with %d questions (%d marks), filters=%s",
+            jid,
+            len(pool),
+            sum(q.get("marks", 0) for q in pool),
+            {
+                "topic_filter": data.get("topic_filter"),
+                "diff_filter": data.get("diff_filter"),
+                "balance_topics": data.get("balance_topics", True),
+                "spaced_repetition": data.get("spaced_repetition", False),
+            },
+        )
 
         # Spaced repetition: apply weakness weights if user has score data
         user_id = _user_id_for_generate
@@ -436,8 +464,15 @@ def generate(jid):
             balance_topics=data.get("balance_topics", True),
             weights=weights,
         )
+        log.info("Job %s: make_packs returned %d pack(s)", jid, len(packs))
         if not packs:
-            update_job(jid, status="error", message="No packs with current filters."); return
+            update_job(
+                jid,
+                status="error",
+                message=f"No packs with current filters. "
+                        f"Questions={len(pool)}, Marks={sum(q.get('marks', 0) for q in pool)}.",
+            )
+            return
 
         out_dir = OUTPUT_DIR / jid
         out_dir.mkdir(exist_ok=True)
@@ -581,6 +616,8 @@ def custom_pack(jid):
 @require_job
 def status(jid):
     j = get_job(jid)
+    if not j:
+        return jsonify({"error": "Job state unavailable"}), 404
     return jsonify({
         "status": j["status"], "progress": j["progress"],
         "message": j["message"], "warnings": j.get("warnings", []),
@@ -713,8 +750,9 @@ def save_session(jid):
         "jid": jid, "pool": pool_to_session(pool),
         "warnings": job.get("warnings", []),
         "classified": job.get("classified", False),
-        "pack_files": [{k: v for k, v in pf.items() if k != "questions"}
-                       for pf in job.get("pack_files", [])],
+        # Keep full pack metadata so features like LLM context copy still work
+        # after restoring from a cached session.
+        "pack_files": job.get("pack_files", []),
     }
     path = SESSION_DIR / f"{jid}.json"
     path.write_text(json.dumps(session, indent=2))
@@ -774,6 +812,7 @@ def load_session(filename):
         set_job_docs(jid, open_docs, pool)
         update_job(jid, status="classified" if classified else "extracted",
                    pool=pool, classified=classified,
+                   pack_files=data.get("pack_files", []),
                    warnings=data.get("warnings", []),
                    message=f"Loaded {len(pool)} questions from session.")
         return jsonify({"job_id": jid, "questions": len(pool),
@@ -798,8 +837,14 @@ def llm_context(jid, pack_num):
     if not pool:
         return jsonify({"error": "Pool is empty"}), 404
 
-    pack_ids = {(q["key"], q["q"]) for q in pack_meta["questions"]}
-    order    = {(q["key"], q["q"]): i for i, q in enumerate(pack_meta["questions"])}
+    pack_questions = pack_meta.get("questions", [])
+    if not pack_questions:
+        return jsonify({
+            "error": "This pack is missing question mapping. Regenerate packs once, then copy context again."
+        }), 400
+
+    pack_ids = {(q["key"], q["q"]) for q in pack_questions}
+    order    = {(q["key"], q["q"]): i for i, q in enumerate(pack_questions)}
     pack_qs  = sorted([q for q in pool if (q["key"], q["q"]) in pack_ids],
                       key=lambda q: order.get((q["key"], q["q"]), 999))
 

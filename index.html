@@ -292,13 +292,13 @@
     /* Progress pill */
     #progress-wrap {
       position: fixed;
-      top: var(--safe-top);
-      left: 50%;
-      transform: translateX(-50%);
+      left: 0;
+      right: 0;
+      bottom: 0;
       z-index: 60;
-      width: 200px;
-      height: 4px;
-      border-radius: 2px;
+      width: 100%;
+      height: 6px;
+      border-radius: 0;
       background: rgba(0, 0, 0, 0.10);
       overflow: hidden;
       transition: opacity 300ms var(--spring-snappy)
@@ -336,12 +336,12 @@
     }
 
     .step-card {
-      border-radius: 20px;
-      padding: 20px;
+      border-radius: 16px;
+      padding: 14px 16px;
       transition: all 400ms var(--spring-default);
       overflow: hidden;
       position: relative;
-      margin-bottom: 12px
+      margin-bottom: 8px
     }
 
     .step-header {
@@ -381,14 +381,14 @@
     }
 
     .step-title {
-      font-size: 17px;
+      font-size: 15px;
       font-weight: 600;
       letter-spacing: -0.41px;
       color: var(--text-primary)
     }
 
     .step-sub {
-      font-size: 13px;
+      font-size: 12px;
       font-weight: 400;
       letter-spacing: -0.08px;
       color: var(--text-secondary);
@@ -396,7 +396,7 @@
     }
 
     .step-body {
-      margin-top: 16px;
+      margin-top: 10px;
       display: none
     }
 
@@ -1955,7 +1955,7 @@
 
     <!-- Upload -->
     <div id="screen-upload"
-      style="display:none;width:100%;max-width:390px;padding:0 24px;overflow-y:auto;max-height:100vh;padding-top:20px;flex-direction:column;align-items:stretch">
+      style="display:none;width:100%;max-width:390px;padding:0 24px;padding-top:20px;flex-direction:column;align-items:stretch">
       <div style="text-align:center;margin-bottom:28px">
         <div style="font-size:28px;font-weight:700;letter-spacing:-0.3px;color:var(--text-primary);margin-bottom:8px">
           Upload your papers</div>
@@ -1982,6 +1982,8 @@
       </div>
       <div style="margin-top:20px;display:flex;flex-direction:column;gap:10px">
         <button class="cta-btn primary" id="btn-start" onclick="startPipeline()" disabled>Begin</button>
+        <button class="cta-btn glass-btn" id="btn-resume-last" onclick="resumeLatestSession(this)"
+          style="font-size:15px;display:none">Resume Last Cached Session</button>
         <button class="cta-btn glass-btn" id="btn-load-session" onclick="openSessionPicker()"
           style="font-size:15px">Load Saved Session</button>
       </div>
@@ -1993,7 +1995,7 @@
 
     <!-- Pipeline -->
     <div id="screen-pipeline"
-      style="display:none;width:100%;max-width:390px;padding:0 24px;overflow-y:auto;max-height:100vh">
+      style="display:none;width:100%;max-width:390px;padding:0 24px">
       <div style="text-align:center;margin-bottom:24px;padding-top:20px">
         <div id="pipeline-headline"
           style="font-size:28px;font-weight:700;letter-spacing:-0.3px;color:var(--text-primary);margin-bottom:8px">
@@ -2407,12 +2409,26 @@
     let authEnabled = false;
     let supabaseUrl = "";   // cached from /api/config
     let supabaseAnon = "";   // cached from /api/config
+    let latestSessionFilename = "";
 
     // ── apiFetch — attaches X-PackGen-Key to every request ───────────────────
     function apiFetch(url, options = {}) {
       const headers = { ...(options.headers || {}) };
       if (pgKey) headers["X-PackGen-Key"] = pgKey;
-      return fetch(url, { ...options, headers });
+      return fetch(url, { ...options, headers }).then(async (res) => {
+        if (!res.ok) {
+          let detail = "";
+          try { detail = await res.text(); } catch (_) { }
+          console.error("[PackGen] API error", {
+            url,
+            status: res.status,
+            statusText: res.statusText,
+            detail,
+          });
+          throw new Error(`API ${res.status} at ${url}`);
+        }
+        return res;
+      });
     }
 
     // ── Init ──────────────────────────────────────────────────────────────────
@@ -2437,6 +2453,22 @@
       jobId = (await r.json()).job_id;
       const t = await fetch("/api/topics");
       allTopics = (await t.json()).topics;
+
+      try {
+        const s = await (await apiFetch("/api/session/list")).json();
+        const sessions = s.sessions || [];
+        if (sessions.length) {
+          latestSessionFilename = sessions[0].filename;
+          const b = document.getElementById("btn-resume-last");
+          if (b) {
+            b.style.display = "block";
+            b.textContent = `Resume Last Cached Session (${sessions[0].questions}q)`;
+            b.dataset.filename = latestSessionFilename;
+          }
+        }
+      } catch (e) {
+        console.warn("Could not check cached sessions:", e);
+      }
     }
 
     // ── Auth ──────────────────────────────────────────────────────────────────
@@ -2515,6 +2547,10 @@
 
           showScreen("screen-upload");
           setProgress(0.15);
+        } else if (authMode === "signup" && d.user && !d.access_token) {
+          errEl.textContent = "Account created. Check your email to confirm, then sign in.";
+          switchAuthTab("signin");
+          document.getElementById("auth-email").value = email;
         } else {
           // Surface a useful error message
           const msg = d.error_description || d.msg || d.message || d.error || "Authentication failed.";
@@ -2633,16 +2669,27 @@
         activateStep("generate");
         document.getElementById("pipeline-headline").textContent = "Building packs…";
         document.getElementById("pipeline-sub").textContent = "Assembling ~100-mark practice papers";
+        console.log("[PackGen] Step 4 generate request", {
+          jobId,
+          payload: { balance_topics: true, diff_filter: [1, 5] }
+        });
         await apiFetch(`/api/generate/${jobId}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ balance_topics: true, diff_filter: [1, 5] }) });
         const generateResult = await pollStep("generating", "generate", "bar-generate", "msg-generate", 0.85, 1.0);
+        console.log("[PackGen] Step 4 generate result", generateResult);
         ensureStepSucceeded(generateResult, "Pack generation failed");
 
         const s = await (await apiFetch(`/api/status/${jobId}`)).json();
+        console.log("[PackGen] Step 4 final status", s);
         packData = s.pack_files || [];
         if (!packData.length) {
           throw new Error("Pack generation completed with no output files.");
         }
         doneStep("generate"); setProgress(1.0);
+        try {
+          await apiFetch(`/api/session/save/${jobId}`, { method: "POST" });
+        } catch (e) {
+          console.warn("Auto-save session failed:", e);
+        }
         setTimeout(() => revealApp(), 600);
       } catch (err) {
         alert(err?.message || "Pipeline failed. Check warnings and try again.");
@@ -2671,6 +2718,15 @@
         const DONE = ["extracted", "classified", "done", "error"];
         const timer = setInterval(async () => {
           const d = await (await apiFetch(`/api/status/${jobId}`)).json();
+          if (stepId === "generate") {
+            console.log("[PackGen] Step 4 polling", {
+              status: d.status,
+              progress: d.progress,
+              message: d.message,
+              warnings: d.warnings || [],
+              pack_count: (d.pack_files || []).length,
+            });
+          }
           const pct = d.progress || 0;
           const mapped = fromPct + (toPct - fromPct) * (pct / 100);
           setBar(stepId, pct); setMsg(stepId, d.message || ""); setProgress(mapped);
@@ -2999,6 +3055,7 @@
             <path d="M18 16v4M16 18h4" stroke="rgba(175,82,222,0.9)" stroke-width="1.5"/>`;
         }, 2500);
       } catch (e) {
+        console.error("[PackGen] Copy context failed:", e);
         tip.textContent = "Copy failed — try again";
         tip.style.opacity = "1";
         setTimeout(() => { tip.style.opacity = ""; tip.textContent = "Copy context for AI" }, 2500);
@@ -3071,6 +3128,11 @@
           throw new Error("No packs were generated. Check warnings and try again.");
         }
         renderPacks(packData);
+        try {
+          await apiFetch(`/api/session/save/${jobId}`, { method: "POST" });
+        } catch (e) {
+          console.warn("Auto-save session failed:", e);
+        }
         switchTab("packs", document.getElementById("tab-packs"));
       } catch (err) {
         alert(err?.message || "Pack regeneration failed.");
@@ -3276,6 +3338,15 @@
           </div>
           <button onclick="loadSession('${s.filename}')" style="padding:6px 14px;border-radius:20px;background:rgba(30,30,30,0.85);color:white;border:none;font-size:12px;font-weight:600;cursor:pointer">Load</button>
         </div>`).join("");
+    }
+
+    async function resumeLatestSession(btn) {
+      const filename = (btn && btn.dataset && btn.dataset.filename) || latestSessionFilename;
+      if (!filename) {
+        await openSessionPicker();
+        return;
+      }
+      await loadSession(filename);
     }
 
     async function loadSession(filename) {

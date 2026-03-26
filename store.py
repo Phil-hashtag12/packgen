@@ -46,8 +46,29 @@ def _serialisable_pool(pool: list) -> list:
     """Strip fitz objects from pool so it can be JSON-serialised."""
     out = []
     for q in pool:
-        out.append({k: v for k, v in q.items()
-                    if k not in ("qp_doc", "ms_doc")})
+        item = {}
+        for k, v in q.items():
+            if k in ("qp_doc", "ms_doc"):
+                continue  # fitz documents — never serialised
+            elif k in ("qp_parts", "ms_parts"):
+                # List of (page_no, fitz.Rect) — serialise Rect as [x0,y0,x1,y1]
+                serialised = []
+                for entry in v:
+                    if isinstance(entry, (list, tuple)) and len(entry) == 2:
+                        pno, clip = entry
+                        if hasattr(clip, 'x0'):
+                            # fitz.Rect object
+                            serialised.append([pno, [clip.x0, clip.y0, clip.x1, clip.y1]])
+                        elif isinstance(clip, (list, tuple)):
+                            serialised.append([pno, list(clip)])
+                        else:
+                            serialised.append([pno, clip])
+                    else:
+                        serialised.append(entry)
+                item[k] = serialised
+            else:
+                item[k] = v
+        out.append(item)
     return out
 
 
