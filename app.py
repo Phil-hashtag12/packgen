@@ -449,6 +449,8 @@ def generate(jid):
                        message=f"Writing pack {i}/{len(packs)}…")
             try:
                 qf, mf, total_marks, topic_counts, est_time = build_pack_pdfs(pack, i, out_dir)
+                if not qf.exists() or not mf.exists():
+                    raise RuntimeError("Generated PDF files were not written to disk")
                 pack_files.append({
                     "pack_num": i, "total_marks": total_marks,
                     "question_count": len(pack), "topics": topic_counts,
@@ -460,8 +462,25 @@ def generate(jid):
                 job_warnings.append(f"Pack {i} error: {e}")
                 log.error("Pack %d error: %s", i, e)
 
+        if not pack_files:
+            update_job(
+                jid,
+                status="error",
+                progress=100,
+                message="Pack generation failed. No output files were created.",
+                pack_files=[],
+                warnings=job_warnings,
+            )
+            log.error("Job %s: all pack builds failed (%d attempted)", jid, len(packs))
+            return
+
+        failed_count = len(packs) - len(pack_files)
+        done_message = f"Generated {len(pack_files)} packs."
+        if failed_count > 0:
+            done_message += f" ({failed_count} failed - see warnings.)"
+
         update_job(jid, status="done", progress=100,
-                   message=f"Generated {len(pack_files)} packs.",
+                   message=done_message,
                    pack_files=pack_files, warnings=job_warnings)
         log.info("Job %s: generated %d packs", jid, len(pack_files))
     threading.Thread(target=run, daemon=True, name=f"generate-{jid}").start()
