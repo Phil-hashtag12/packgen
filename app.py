@@ -38,6 +38,7 @@ log = logging.getLogger("packgen")
 from extractor  import (find_pairs, build_question_pool, render_question_png,
                          pool_to_session, session_to_pool)
 from packer     import make_packs, build_pack_pdfs, SPEC_TOPICS, estimate_time
+import classifier as _classifier
 from classifier import classify_batch
 from auth       import verify_token, get_user_profile, increment_usage, check_quota
 from api_keys   import (validate_packgen_key, check_key_rate_limit,
@@ -178,6 +179,23 @@ def config():
         "auth_enabled":  bool(os.environ.get("SUPABASE_URL", "")),
         "supabase_url":  os.environ.get("SUPABASE_URL", ""),
         "supabase_anon": os.environ.get("SUPABASE_ANON_KEY", ""),
+    })
+
+@app.route("/api/debug/ai")
+def debug_ai():
+    """
+    Safe runtime diagnostics for AI classification config.
+    No secrets are returned, only booleans and selected identifiers.
+    """
+    return jsonify({
+        "env_ai_backend": os.environ.get("AI_BACKEND", ""),
+        "classifier_ai_backend": _classifier.AI_BACKEND,
+        "has_openrouter_env_key": bool(os.environ.get("OPENROUTER_API_KEY", "").strip()),
+        "has_anthropic_env_key": bool(os.environ.get("ANTHROPIC_API_KEY", "").strip()),
+        "classifier_has_openrouter_key": bool((_classifier.OPENROUTER_API_KEY or "").strip()),
+        "classifier_has_anthropic_key": bool((_classifier.ANTHROPIC_API_KEY or "").strip()),
+        "or_text_model": _classifier.OR_TEXT_MODEL,
+        "or_vision_model": _classifier.OR_VISION_MODEL,
     })
 
 @app.route("/api/topics")

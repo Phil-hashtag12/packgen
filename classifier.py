@@ -247,6 +247,7 @@ def classify_batch(questions: list, api_key: str = "", spec_text: str = "",
     classified = 0
     api_failures = 0
     api_success = 0
+    first_api_error = ""
 
     # Cache pass
     to_classify = []
@@ -281,6 +282,8 @@ def classify_batch(questions: list, api_key: str = "", spec_text: str = "",
             log.error("Text batch classify error: %s", e)
             _default_batch(batch)
             api_failures += 1
+            if not first_api_error:
+                first_api_error = str(e)
         classified += len(batch)
         if progress_cb:
             progress_cb(classified, total, f"Classified {classified}/{total}…")
@@ -308,6 +311,8 @@ def classify_batch(questions: list, api_key: str = "", spec_text: str = "",
                 log.error("Vision-text batch error: %s", e)
                 _default_batch(text_ok)
                 api_failures += 1
+                if not first_api_error:
+                    first_api_error = str(e)
             time.sleep(0.2)
 
         # Diagram-heavy — vision single call
@@ -353,6 +358,8 @@ def classify_batch(questions: list, api_key: str = "", spec_text: str = "",
                 q.setdefault("subtopic", "Unknown")
                 q.setdefault("difficulty", 3)
                 api_failures += 1
+                if not first_api_error:
+                    first_api_error = str(e)
             time.sleep(0.8)
 
         classified += len(batch)
@@ -360,7 +367,10 @@ def classify_batch(questions: list, api_key: str = "", spec_text: str = "",
             progress_cb(classified, total, f"Classified {classified}/{total}…")
 
     if to_classify and api_success == 0 and api_failures > 0:
-        raise RuntimeError("All classification API calls failed. Check API key, backend settings, and provider availability.")
+        msg = "All classification API calls failed. Check API key, backend settings, and provider availability."
+        if first_api_error:
+            msg += f" First error: {first_api_error}"
+        raise RuntimeError(msg)
 
     return questions
 
