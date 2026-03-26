@@ -1,13 +1,28 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>PackGen</title>
   <style>
     /* ─── Reset ─────────────────────────────────────────────────────────────── */
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent }
-    html, body { height: 100%; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', system-ui, sans-serif; -webkit-font-smoothing: antialiased }
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent
+    }
+
+    html,
+    body {
+      height: 100%;
+      overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased
+    }
 
     /* ─── CSS Variables ──────────────────────────────────────────────────────── */
     :root {
@@ -15,328 +30,1849 @@
       --spring-snappy: cubic-bezier(0.25, 0.46, 0.45, 0.94);
       --spring-bouncy: cubic-bezier(0.175, 0.885, 0.32, 1.275);
       --spring-decel: cubic-bezier(0.0, 0.0, 0.2, 1.0);
-      --blue: #3A3A3C; --green: #48484A; --orange: #636366; --red: #8E8E93; --purple: #636366; --teal: #8E8E93; --pink: #48484A; --accent: #3A3A3C;
-      --text-primary: rgba(30,30,30,0.92); --text-secondary: rgba(30,30,30,0.50); --text-tertiary: rgba(30,30,30,0.28);
-      --safe-top: 59px; --safe-bottom: 34px;
+      --blue: #3A3A3C;
+      --green: #48484A;
+      --orange: #636366;
+      --red: #8E8E93;
+      --purple: #636366;
+      --teal: #8E8E93;
+      --pink: #48484A;
+      --accent: #3A3A3C;
+      --text-primary: rgba(30, 30, 30, 0.92);
+      --text-secondary: rgba(30, 30, 30, 0.50);
+      --text-tertiary: rgba(30, 30, 30, 0.28);
+      --safe-top: 59px;
+      --safe-bottom: 34px;
     }
 
     /* ─── Wallpaper ──────────────────────────────────────────────────────────── */
-    #wallpaper { position:fixed; inset:0; z-index:0; background:#f0f0f0; overflow:hidden }
-    #wallpaper canvas { position:absolute; inset:0; width:100%; height:100% }
+    #wallpaper {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      background: #f0f0f0;
+      overflow: hidden
+    }
+
+    #wallpaper canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%
+    }
 
     /* ─── Scroll edge blur ───────────────────────────────────────────────────── */
-    .scroll-edge { position:fixed; left:0; right:0; height:80px; pointer-events:none; z-index:10; backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px) }
-    .scroll-edge-top { top:0; mask-image:linear-gradient(to bottom, black 0%, transparent 100%); -webkit-mask-image:linear-gradient(to bottom, black 0%, transparent 100%) }
-    .scroll-edge-bottom { bottom:0; mask-image:linear-gradient(to top, black 0%, transparent 100%); -webkit-mask-image:linear-gradient(to top, black 0%, transparent 100%) }
+    .scroll-edge {
+      position: fixed;
+      left: 0;
+      right: 0;
+      height: 80px;
+      pointer-events: none;
+      z-index: 10;
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px)
+    }
+
+    .scroll-edge-top {
+      top: 0;
+      mask-image: linear-gradient(to bottom, black 0%, transparent 100%);
+      -webkit-mask-image: linear-gradient(to bottom, black 0%, transparent 100%)
+    }
+
+    .scroll-edge-bottom {
+      bottom: 0;
+      mask-image: linear-gradient(to top, black 0%, transparent 100%);
+      -webkit-mask-image: linear-gradient(to top, black 0%, transparent 100%)
+    }
 
     /* ─── Glass ──────────────────────────────────────────────────────────────── */
-    .glass { position:relative; background:rgba(255,255,255,0.72); backdrop-filter:blur(40px) saturate(140%) brightness(1.02); -webkit-backdrop-filter:blur(40px) saturate(140%) brightness(1.02); border:1px solid rgba(255,255,255,0.90); border-top-color:rgba(255,255,255,0.95); border-left-color:rgba(255,255,255,0.92); border-bottom-color:rgba(255,255,255,0.60); border-right-color:rgba(255,255,255,0.65); box-shadow:0 2px 0 rgba(255,255,255,0.80) inset, 0 -1px 0 rgba(0,0,0,0.04) inset, 0 8px 32px rgba(0,0,0,0.08), 0 2px 6px rgba(0,0,0,0.05) }
-    .glass::before { content:''; position:absolute; inset:0; border-radius:inherit; background:linear-gradient(175deg, rgba(255,255,255,0.60) 0%, rgba(255,255,255,0.15) 40%, rgba(255,255,255,0.0) 70%); pointer-events:none; z-index:0 }
+    .glass {
+      position: relative;
+      background: rgba(255, 255, 255, 0.72);
+      backdrop-filter: blur(40px) saturate(140%) brightness(1.02);
+      -webkit-backdrop-filter: blur(40px) saturate(140%) brightness(1.02);
+      border: 1px solid rgba(255, 255, 255, 0.90);
+      border-top-color: rgba(255, 255, 255, 0.95);
+      border-left-color: rgba(255, 255, 255, 0.92);
+      border-bottom-color: rgba(255, 255, 255, 0.60);
+      border-right-color: rgba(255, 255, 255, 0.65);
+      box-shadow: 0 2px 0 rgba(255, 255, 255, 0.80) inset, 0 -1px 0 rgba(0, 0, 0, 0.04) inset, 0 8px 32px rgba(0, 0, 0, 0.08), 0 2px 6px rgba(0, 0, 0, 0.05)
+    }
 
-    @keyframes materialize { from { opacity:0; transform:scale(0.92) } to { opacity:1; transform:scale(1) } }
-    .materialize { animation: materialize 380ms var(--spring-decel) forwards }
+    .glass::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      background: linear-gradient(175deg, rgba(255, 255, 255, 0.60) 0%, rgba(255, 255, 255, 0.15) 40%, rgba(255, 255, 255, 0.0) 70%);
+      pointer-events: none;
+      z-index: 0
+    }
+
+    @keyframes materialize {
+      from {
+        opacity: 0;
+        transform: scale(0.92)
+      }
+
+      to {
+        opacity: 1;
+        transform: scale(1)
+      }
+    }
+
+    .materialize {
+      animation: materialize 380ms var(--spring-decel) forwards
+    }
 
     /* ─── App container ──────────────────────────────────────────────────────── */
-    #app { position:fixed; inset:0; z-index:5; display:flex; flex-direction:column; overflow:hidden }
+    #app {
+      position: fixed;
+      inset: 0;
+      z-index: 5;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden
+    }
 
     /* ─── Onboarding ─────────────────────────────────────────────────────────── */
-    #onboarding { position:fixed; inset:0; z-index:50; display:flex; flex-direction:column; align-items:center; justify-content:center; transition:opacity 500ms var(--spring-decel), transform 500ms var(--spring-decel) }
-    #onboarding.hidden { opacity:0; transform:scale(0.96); pointer-events:none }
+    #onboarding {
+      position: fixed;
+      inset: 0;
+      z-index: 50;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      transition: opacity 500ms var(--spring-decel), transform 500ms var(--spring-decel)
+    }
+
+    #onboarding.hidden {
+      opacity: 0;
+      transform: scale(0.96);
+      pointer-events: none
+    }
 
     /* Welcome */
-    .welcome-icon { width:96px; height:96px; border-radius:24px; margin-bottom:32px; display:flex; align-items:center; justify-content:center; font-size:44px }
-    .welcome-title { font-size:34px; font-weight:700; letter-spacing:-0.4px; line-height:41px; color:var(--text-primary); margin-bottom:12px }
-    .welcome-sub { font-size:17px; font-weight:400; letter-spacing:-0.41px; line-height:22px; color:var(--text-secondary); margin-bottom:48px }
-    .welcome-features { display:flex; flex-direction:column; gap:24px; width:100%; margin-bottom:52px }
-    .feat-row { display:flex; align-items:center; gap:16px; text-align:left }
-    .feat-icon { width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:20px; flex-shrink:0 }
-    .feat-text-title { font-size:15px; font-weight:600; letter-spacing:-0.23px; color:var(--text-primary) }
-    .feat-text-sub { font-size:13px; font-weight:400; letter-spacing:-0.08px; color:var(--text-secondary); margin-top:2px }
+    .welcome-icon {
+      width: 96px;
+      height: 96px;
+      border-radius: 24px;
+      margin-bottom: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 44px
+    }
+
+    .welcome-title {
+      font-size: 34px;
+      font-weight: 700;
+      letter-spacing: -0.4px;
+      line-height: 41px;
+      color: var(--text-primary);
+      margin-bottom: 12px
+    }
+
+    .welcome-sub {
+      font-size: 17px;
+      font-weight: 400;
+      letter-spacing: -0.41px;
+      line-height: 22px;
+      color: var(--text-secondary);
+      margin-bottom: 48px
+    }
+
+    .welcome-features {
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+      width: 100%;
+      margin-bottom: 52px
+    }
+
+    .feat-row {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      text-align: left
+    }
+
+    .feat-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      flex-shrink: 0
+    }
+
+    .feat-text-title {
+      font-size: 15px;
+      font-weight: 600;
+      letter-spacing: -0.23px;
+      color: var(--text-primary)
+    }
+
+    .feat-text-sub {
+      font-size: 13px;
+      font-weight: 400;
+      letter-spacing: -0.08px;
+      color: var(--text-secondary);
+      margin-top: 2px
+    }
 
     /* Auth screen */
-    #screen-auth { display:none; width:100%; max-width:390px; padding:0 28px }
-    .auth-tabs { display:flex; gap:0; margin-bottom:28px; border-radius:12px; overflow:hidden; background:rgba(0,0,0,0.06); padding:3px }
-    .auth-tab { flex:1; height:36px; border:none; background:none; font-family:inherit; font-size:14px; font-weight:600; color:var(--text-secondary); border-radius:10px; cursor:pointer; transition:all 200ms var(--spring-snappy) }
-    .auth-tab.active { background:white; color:var(--text-primary); box-shadow:0 2px 8px rgba(0,0,0,0.10) }
-    .auth-field { width:100%; padding:14px 16px; border-radius:14px; border:1.5px solid rgba(0,0,0,0.10); background:rgba(255,255,255,0.85); font-family:inherit; font-size:15px; color:var(--text-primary); outline:none; transition:border-color 150ms; margin-bottom:10px }
-    .auth-field:focus { border-color:rgba(0,0,0,0.35) }
-    .auth-error { font-size:13px; color:#ff3b30; margin-bottom:10px; min-height:16px }
+    #screen-auth {
+      display: none;
+      width: 100%;
+      max-width: 390px;
+      padding: 0 28px;
+      flex-direction: column;
+      align-items: stretch
+    }
+
+    .auth-tabs {
+      display: flex;
+      gap: 0;
+      margin-bottom: 28px;
+      border-radius: 12px;
+      overflow: hidden;
+      background: rgba(0, 0, 0, 0.06);
+      padding: 3px
+    }
+
+    .auth-tab {
+      flex: 1;
+      height: 36px;
+      border: none;
+      background: none;
+      font-family: inherit;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 200ms var(--spring-snappy)
+    }
+
+    .auth-tab.active {
+      background: white;
+      color: var(--text-primary);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.10)
+    }
+
+    .auth-field {
+      width: 100%;
+      padding: 14px 16px;
+      border-radius: 14px;
+      border: 1.5px solid rgba(0, 0, 0, 0.10);
+      background: rgba(255, 255, 255, 0.85);
+      font-family: inherit;
+      font-size: 15px;
+      color: var(--text-primary);
+      outline: none;
+      transition: border-color 150ms;
+      margin-bottom: 10px
+    }
+
+    .auth-field:focus {
+      border-color: rgba(0, 0, 0, 0.35)
+    }
+
+    .auth-error {
+      font-size: 13px;
+      color: #ff3b30;
+      margin-bottom: 10px;
+      min-height: 16px
+    }
 
     /* Progress pill */
-    #progress-wrap { position:fixed; top:var(--safe-top); left:50%; transform:translateX(-50%); z-index:60; width:200px; height:4px; border-radius:2px; background:rgba(0,0,0,0.10); overflow:hidden; transition:opacity 300ms var(--spring-snappy) }
-    #progress-fill { height:100%; width:0%; background:rgba(0,0,0,0.45); border-radius:2px; transition:width 400ms var(--spring-default) }
-    #progress-wrap.hidden { opacity:0; pointer-events:none }
+    #progress-wrap {
+      position: fixed;
+      top: var(--safe-top);
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 60;
+      width: 200px;
+      height: 4px;
+      border-radius: 2px;
+      background: rgba(0, 0, 0, 0.10);
+      overflow: hidden;
+      transition: opacity 300ms var(--spring-snappy)
+    }
+
+    #progress-fill {
+      height: 100%;
+      width: 0%;
+      background: rgba(0, 0, 0, 0.45);
+      border-radius: 2px;
+      transition: width 400ms var(--spring-default)
+    }
+
+    #progress-wrap.hidden {
+      opacity: 0;
+      pointer-events: none
+    }
 
     /* ─── Pipeline ───────────────────────────────────────────────────────────── */
-    #pipeline { width:100%; max-width:390px; padding:0 24px; display:flex; flex-direction:column; gap:16px; transition:opacity 400ms var(--spring-snappy), transform 400ms var(--spring-snappy) }
-    #pipeline.hidden { opacity:0; transform:translateY(24px); pointer-events:none; position:absolute }
+    #pipeline {
+      width: 100%;
+      max-width: 390px;
+      padding: 0 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      transition: opacity 400ms var(--spring-snappy), transform 400ms var(--spring-snappy)
+    }
 
-    .step-card { border-radius:20px; padding:20px; transition:all 400ms var(--spring-default); overflow:hidden; position:relative }
-    .step-header { display:flex; align-items:center; gap:12px; margin-bottom:0 }
-    .step-num { width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700; background:rgba(255,255,255,0.15); color:var(--text-secondary); transition:all 300ms var(--spring-default); flex-shrink:0 }
-    .step-num.active { background:var(--blue); color:white }
-    .step-num.done { background:var(--green); color:white }
-    .step-num.done::after { content:'✓' }
-    .step-title { font-size:17px; font-weight:600; letter-spacing:-0.41px; color:var(--text-primary) }
-    .step-sub { font-size:13px; font-weight:400; letter-spacing:-0.08px; color:var(--text-secondary); margin-top:2px }
-    .step-body { margin-top:16px; display:none }
-    .step-card.active .step-body { display:block }
+    #pipeline.hidden {
+      opacity: 0;
+      transform: translateY(24px);
+      pointer-events: none;
+      position: absolute
+    }
+
+    .step-card {
+      border-radius: 20px;
+      padding: 20px;
+      transition: all 400ms var(--spring-default);
+      overflow: hidden;
+      position: relative;
+      margin-bottom: 12px
+    }
+
+    .step-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 0
+    }
+
+    .step-num {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 700;
+      background: rgba(255, 255, 255, 0.15);
+      color: var(--text-secondary);
+      transition: all 300ms var(--spring-default);
+      flex-shrink: 0
+    }
+
+    .step-num.active {
+      background: var(--blue);
+      color: white
+    }
+
+    .step-num.done {
+      background: var(--green);
+      color: white
+    }
+
+    .step-num.done::after {
+      content: '✓'
+    }
+
+    .step-title {
+      font-size: 17px;
+      font-weight: 600;
+      letter-spacing: -0.41px;
+      color: var(--text-primary)
+    }
+
+    .step-sub {
+      font-size: 13px;
+      font-weight: 400;
+      letter-spacing: -0.08px;
+      color: var(--text-secondary);
+      margin-top: 2px
+    }
+
+    .step-body {
+      margin-top: 16px;
+      display: none
+    }
+
+    .step-card.active .step-body {
+      display: block
+    }
 
     /* Warning badge on step card */
-    .step-warn-badge { position:absolute; top:14px; right:16px; background:#ff9500; color:white; font-size:10px; font-weight:700; padding:2px 7px; border-radius:20px; display:none }
-    .step-warn-badge.visible { display:block }
+    .step-warn-badge {
+      position: absolute;
+      top: 14px;
+      right: 16px;
+      background: #ff9500;
+      color: white;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 20px;
+      display: none
+    }
+
+    .step-warn-badge.visible {
+      display: block
+    }
 
     /* Drop zone */
-    .drop-zone { border:1.5px dashed rgba(0,0,0,0.15); border-radius:16px; padding:28px 20px; text-align:center; cursor:pointer; position:relative; transition:all 200ms var(--spring-snappy); background:rgba(0,0,0,0.02) }
-    .drop-zone:hover, .drop-zone.over { border-color:rgba(0,0,0,0.35); background:rgba(0,0,0,0.04) }
-    .drop-zone input { position:absolute; inset:0; opacity:0; cursor:pointer; width:100%; height:100% }
-    .drop-icon { font-size:32px; margin-bottom:8px }
-    .drop-title { font-size:15px; font-weight:600; letter-spacing:-0.23px; color:var(--text-primary) }
-    .drop-sub { font-size:13px; color:var(--text-secondary); margin-top:4px; line-height:18px }
-    .drop-count { font-size:13px; font-weight:600; color:var(--blue); margin-top:8px }
+    .drop-zone {
+      border: 1.5px dashed rgba(0, 0, 0, 0.15);
+      border-radius: 16px;
+      padding: 28px 20px;
+      text-align: center;
+      cursor: pointer;
+      position: relative;
+      transition: all 200ms var(--spring-snappy);
+      background: rgba(0, 0, 0, 0.02)
+    }
+
+    .drop-zone:hover,
+    .drop-zone.over {
+      border-color: rgba(0, 0, 0, 0.35);
+      background: rgba(0, 0, 0, 0.04)
+    }
+
+    .drop-zone input {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+      width: 100%;
+      height: 100%
+    }
+
+    .drop-icon {
+      font-size: 32px;
+      margin-bottom: 8px
+    }
+
+    .drop-title {
+      font-size: 15px;
+      font-weight: 600;
+      letter-spacing: -0.23px;
+      color: var(--text-primary)
+    }
+
+    .drop-sub {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-top: 4px;
+      line-height: 18px
+    }
+
+    .drop-count {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--blue);
+      margin-top: 8px
+    }
 
     /* Inline progress */
-    .inline-progress { margin-top:12px }
-    .inline-bar-track { height:3px; background:rgba(0,0,0,0.10); border-radius:2px; overflow:hidden }
-    .inline-bar-fill { height:100%; width:0%; border-radius:2px; background:rgba(0,0,0,0.55); transition:width 400ms var(--spring-default) }
-    .inline-msg { font-size:12px; color:var(--text-secondary); margin-top:6px; letter-spacing:0px; line-height:16px; min-height:16px }
+    .inline-progress {
+      margin-top: 12px
+    }
+
+    .inline-bar-track {
+      height: 3px;
+      background: rgba(0, 0, 0, 0.10);
+      border-radius: 2px;
+      overflow: hidden
+    }
+
+    .inline-bar-fill {
+      height: 100%;
+      width: 0%;
+      border-radius: 2px;
+      background: rgba(0, 0, 0, 0.55);
+      transition: width 400ms var(--spring-default)
+    }
+
+    .inline-msg {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-top: 6px;
+      letter-spacing: 0px;
+      line-height: 16px;
+      min-height: 16px
+    }
 
     /* Warning collapsible within step */
-    .step-warnings { margin-top:10px; background:rgba(255,149,0,0.08); border:1px solid rgba(255,149,0,0.20); border-radius:10px; overflow:hidden }
-    .step-warnings-header { padding:8px 12px; font-size:12px; font-weight:600; color:rgba(180,90,0,0.9); cursor:pointer; display:flex; align-items:center; gap:6px }
-    .step-warnings-list { padding:0 12px 8px; display:none }
-    .step-warnings.open .step-warnings-list { display:block }
-    .step-warning-item { font-size:11px; color:rgba(120,60,0,0.85); padding:2px 0; letter-spacing:0 }
+    .step-warnings {
+      margin-top: 10px;
+      background: rgba(255, 149, 0, 0.08);
+      border: 1px solid rgba(255, 149, 0, 0.20);
+      border-radius: 10px;
+      overflow: hidden
+    }
+
+    .step-warnings-header {
+      padding: 8px 12px;
+      font-size: 12px;
+      font-weight: 600;
+      color: rgba(180, 90, 0, 0.9);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px
+    }
+
+    .step-warnings-list {
+      padding: 0 12px 8px;
+      display: none
+    }
+
+    .step-warnings.open .step-warnings-list {
+      display: block
+    }
+
+    .step-warning-item {
+      font-size: 11px;
+      color: rgba(120, 60, 0, 0.85);
+      padding: 2px 0;
+      letter-spacing: 0
+    }
 
     /* Pairs chips */
-    .pairs-row { display:flex; flex-wrap:wrap; gap:6px; margin-top:12px; max-height:80px; overflow:hidden }
-    .pair-chip { padding:4px 10px; border-radius:20px; background:rgba(255,255,255,0.60); border:1px solid rgba(0,0,0,0.08); font-size:11px; font-weight:500; color:var(--text-secondary); white-space:nowrap }
-    .pairs-more { font-size:11px; color:var(--text-tertiary); padding:4px 0; align-self:center }
+    .pairs-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 12px;
+      max-height: 80px;
+      overflow: hidden
+    }
+
+    .pair-chip {
+      padding: 4px 10px;
+      border-radius: 20px;
+      background: rgba(255, 255, 255, 0.60);
+      border: 1px solid rgba(0, 0, 0, 0.08);
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      white-space: nowrap
+    }
+
+    .pairs-more {
+      font-size: 11px;
+      color: var(--text-tertiary);
+      padding: 4px 0;
+      align-self: center
+    }
 
     /* Stats mini */
-    .stats-mini { display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-top:12px }
-    .stat-mini { background:rgba(255,255,255,0.55); border:1px solid rgba(0,0,0,0.07); border-radius:12px; padding:10px 12px }
-    .stat-mini-val { font-size:22px; font-weight:700; letter-spacing:-0.26px; color:var(--text-primary); line-height:28px }
-    .stat-mini-label { font-size:11px; color:var(--text-secondary); letter-spacing:0.06px; margin-top:2px }
+    .stats-mini {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
+      margin-top: 12px
+    }
+
+    .stat-mini {
+      background: rgba(255, 255, 255, 0.55);
+      border: 1px solid rgba(0, 0, 0, 0.07);
+      border-radius: 12px;
+      padding: 10px 12px
+    }
+
+    .stat-mini-val {
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: -0.26px;
+      color: var(--text-primary);
+      line-height: 28px
+    }
+
+    .stat-mini-label {
+      font-size: 11px;
+      color: var(--text-secondary);
+      letter-spacing: 0.06px;
+      margin-top: 2px
+    }
 
     /* CTA buttons */
-    .cta-btn { width:100%; padding:16px; border-radius:50px; border:none; cursor:pointer; font-family:inherit; font-size:17px; font-weight:600; letter-spacing:-0.41px; transition:transform 120ms var(--spring-snappy), box-shadow 120ms var(--spring-snappy) }
-    .cta-btn:active { transform:scale(0.97) }
-    .cta-btn.primary { background:rgba(30,30,30,0.90); color:rgba(255,255,255,0.95) }
-    .cta-btn.glass-btn { background:rgba(0,0,0,0.07); color:var(--text-primary); backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px); border:1px solid rgba(0,0,0,0.10) }
-    .cta-btn:disabled { opacity:0.38; cursor:default }
+    .cta-btn {
+      width: 100%;
+      padding: 16px;
+      border-radius: 50px;
+      border: none;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 17px;
+      font-weight: 600;
+      letter-spacing: -0.41px;
+      transition: transform 120ms var(--spring-snappy), box-shadow 120ms var(--spring-snappy)
+    }
+
+    .cta-btn:active {
+      transform: scale(0.97)
+    }
+
+    .cta-btn.primary {
+      background: rgba(30, 30, 30, 0.90);
+      color: rgba(255, 255, 255, 0.95)
+    }
+
+    .cta-btn.glass-btn {
+      background: rgba(0, 0, 0, 0.07);
+      color: var(--text-primary);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(0, 0, 0, 0.10)
+    }
+
+    .cta-btn:disabled {
+      opacity: 0.38;
+      cursor: default
+    }
 
     /* ─── Navigation ─────────────────────────────────────────────────────────── */
-    #tab-bar { position:fixed; bottom:42px; left:16px; right:16px; height:60px; border-radius:50px; z-index:40; display:flex; align-items:center; padding:0 8px; gap:0; transition:height 300ms var(--spring-snappy), bottom 300ms var(--spring-snappy), opacity 300ms var(--spring-snappy) }
-    #tab-bar.hidden { opacity:0; pointer-events:none; transform:translateY(20px) }
-    .tab-item { flex:1; height:44px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; cursor:pointer; border-radius:40px; transition:all 300ms var(--spring-default); position:relative; min-width:44px }
-    .tab-item.active { background:rgba(0,0,0,0.08) }
-    .tab-icon { font-size:0; width:24px; height:24px; display:flex; align-items:center; justify-content:center }
-    .tab-icon svg { width:22px; height:22px; fill:none; stroke:rgba(0,0,0,0.35); stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; transition:stroke 300ms var(--spring-default) }
-    .tab-item.active .tab-icon svg { stroke:rgba(0,0,0,0.85) }
-    .tab-label { font-size:10px; font-weight:500; letter-spacing:0.06px; color:rgba(0,0,0,0.35); transition:all 300ms var(--spring-snappy) }
-    .tab-item.active .tab-label { color:rgba(0,0,0,0.85) }
+    #tab-bar {
+      position: fixed;
+      bottom: 42px;
+      left: 16px;
+      right: 16px;
+      height: 60px;
+      border-radius: 50px;
+      z-index: 40;
+      display: flex;
+      align-items: center;
+      padding: 0 8px;
+      gap: 0;
+      transition: height 300ms var(--spring-snappy), bottom 300ms var(--spring-snappy), opacity 300ms var(--spring-snappy)
+    }
 
-    #nav-bar { position:fixed; top:var(--safe-top); left:20px; right:20px; height:44px; border-radius:50px; z-index:40; display:flex; align-items:center; padding:0 16px; gap:12px; opacity:0; transform:translateY(-8px); transition:opacity 250ms var(--spring-snappy), transform 250ms var(--spring-snappy) }
-    #nav-bar.visible { opacity:1; transform:translateY(0) }
-    .nav-title { font-size:17px; font-weight:600; letter-spacing:-0.41px; color:var(--text-primary); flex:1 }
+    #tab-bar.hidden {
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(20px)
+    }
+
+    .tab-item {
+      flex: 1;
+      height: 44px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+      cursor: pointer;
+      border-radius: 40px;
+      transition: all 300ms var(--spring-default);
+      position: relative;
+      min-width: 44px
+    }
+
+    .tab-item.active {
+      background: rgba(0, 0, 0, 0.08)
+    }
+
+    .tab-icon {
+      font-size: 0;
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center
+    }
+
+    .tab-icon svg {
+      width: 22px;
+      height: 22px;
+      fill: none;
+      stroke: rgba(0, 0, 0, 0.35);
+      stroke-width: 1.8;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      transition: stroke 300ms var(--spring-default)
+    }
+
+    .tab-item.active .tab-icon svg {
+      stroke: rgba(0, 0, 0, 0.85)
+    }
+
+    .tab-label {
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 0.06px;
+      color: rgba(0, 0, 0, 0.35);
+      transition: all 300ms var(--spring-snappy)
+    }
+
+    .tab-item.active .tab-label {
+      color: rgba(0, 0, 0, 0.85)
+    }
+
+    #nav-bar {
+      position: fixed;
+      top: var(--safe-top);
+      left: 20px;
+      right: 20px;
+      height: 44px;
+      border-radius: 50px;
+      z-index: 40;
+      display: flex;
+      align-items: center;
+      padding: 0 16px;
+      gap: 12px;
+      opacity: 0;
+      transform: translateY(-8px);
+      transition: opacity 250ms var(--spring-snappy), transform 250ms var(--spring-snappy)
+    }
+
+    #nav-bar.visible {
+      opacity: 1;
+      transform: translateY(0)
+    }
+
+    .nav-title {
+      font-size: 17px;
+      font-weight: 600;
+      letter-spacing: -0.41px;
+      color: var(--text-primary);
+      flex: 1
+    }
 
     /* ─── Packs view ─────────────────────────────────────────────────────────── */
-    #packs-view { position:fixed; inset:0; z-index:6; overflow-y:auto; padding:0 20px; padding-top:calc(var(--safe-top) + 8px); padding-bottom:calc(var(--safe-bottom) + 120px); opacity:0; transition:opacity 500ms var(--spring-decel), transform 500ms var(--spring-decel); transform:translateY(32px) }
-    #packs-view.visible { opacity:1; transform:translateY(0) }
+    #packs-view {
+      position: fixed;
+      inset: 0;
+      z-index: 6;
+      overflow-y: auto;
+      padding: 0 20px;
+      padding-top: calc(var(--safe-top) + 8px);
+      padding-bottom: calc(var(--safe-bottom) + 120px);
+      opacity: 0;
+      transition: opacity 500ms var(--spring-decel), transform 500ms var(--spring-decel);
+      transform: translateY(32px)
+    }
 
-    .large-title { font-size:34px; font-weight:700; letter-spacing:-0.4px; line-height:41px; color:var(--text-primary); margin-bottom:4px }
-    .large-sub { font-size:17px; color:var(--text-secondary); letter-spacing:-0.41px; margin-bottom:20px }
+    #packs-view.visible {
+      opacity: 1;
+      transform: translateY(0)
+    }
 
-    .section-header { display:flex; align-items:baseline; justify-content:space-between; margin-bottom:12px; margin-top:24px }
-    .section-title { font-size:22px; font-weight:700; letter-spacing:-0.26px; line-height:28px; color:var(--text-primary) }
-    .section-see-all { font-size:15px; font-weight:400; letter-spacing:-0.23px; color:rgba(0,0,0,0.40); cursor:pointer }
+    .large-title {
+      font-size: 34px;
+      font-weight: 700;
+      letter-spacing: -0.4px;
+      line-height: 41px;
+      color: var(--text-primary);
+      margin-bottom: 4px
+    }
+
+    .large-sub {
+      font-size: 17px;
+      color: var(--text-secondary);
+      letter-spacing: -0.41px;
+      margin-bottom: 20px
+    }
+
+    .section-header {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      margin-bottom: 12px;
+      margin-top: 24px
+    }
+
+    .section-title {
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: -0.26px;
+      line-height: 28px;
+      color: var(--text-primary)
+    }
+
+    .section-see-all {
+      font-size: 15px;
+      font-weight: 400;
+      letter-spacing: -0.23px;
+      color: rgba(0, 0, 0, 0.40);
+      cursor: pointer
+    }
 
     /* Filter bar */
-    .filter-bar { display:flex; gap:8px; overflow-x:auto; scrollbar-width:none; padding-bottom:4px; margin-bottom:16px }
-    .filter-bar::-webkit-scrollbar { display:none }
-    .filter-chip { padding:6px 14px; border-radius:50px; white-space:nowrap; background:rgba(255,255,255,0.65); border:1px solid rgba(0,0,0,0.08); font-size:13px; font-weight:500; color:var(--text-secondary); cursor:pointer; flex-shrink:0; transition:all 200ms var(--spring-snappy); letter-spacing:-0.08px }
-    .filter-chip.active { background:rgba(30,30,30,0.85); border-color:rgba(0,0,0,0.0); color:rgba(255,255,255,0.95) }
+    .filter-bar {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      scrollbar-width: none;
+      padding-bottom: 4px;
+      margin-bottom: 16px
+    }
+
+    .filter-bar::-webkit-scrollbar {
+      display: none
+    }
+
+    .filter-chip {
+      padding: 6px 14px;
+      border-radius: 50px;
+      white-space: nowrap;
+      background: rgba(255, 255, 255, 0.65);
+      border: 1px solid rgba(0, 0, 0, 0.08);
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: all 200ms var(--spring-snappy);
+      letter-spacing: -0.08px
+    }
+
+    .filter-chip.active {
+      background: rgba(30, 30, 30, 0.85);
+      border-color: rgba(0, 0, 0, 0.0);
+      color: rgba(255, 255, 255, 0.95)
+    }
 
     /* Tab views */
-    .tab-view { display:none }
-    .tab-view.active { display:block }
+    .tab-view {
+      display: none
+    }
+
+    .tab-view.active {
+      display: block
+    }
 
     /* Pack card */
-    .pack-card { border-radius:20px; margin-bottom:16px; overflow:hidden; transition:transform 200ms var(--spring-snappy) }
-    .pack-card:active { transform:scale(0.98) }
-    .pack-card-top { padding:20px 20px 16px; position:relative; z-index:1 }
-    .pack-card-num { font-size:12px; font-weight:600; letter-spacing:0.06px; color:var(--text-secondary); text-transform:uppercase; margin-bottom:4px }
-    .pack-card-marks { font-size:42px; font-weight:300; letter-spacing:-0.03em; line-height:1; color:rgba(20,20,20,0.90) }
-    .pack-card-marks span { font-size:17px; color:var(--text-secondary); font-weight:400 }
-    .pack-card-meta { font-size:13px; color:var(--text-secondary); margin-top:4px; letter-spacing:-0.08px }
+    .pack-card {
+      border-radius: 20px;
+      margin-bottom: 16px;
+      overflow: hidden;
+      transition: transform 200ms var(--spring-snappy)
+    }
 
-    .topic-bars { padding:0 20px 4px }
-    .topic-bar-row { display:flex; align-items:center; gap:8px; padding:4px 0 }
-    .topic-dot { width:7px; height:7px; border-radius:50%; flex-shrink:0 }
-    .topic-name { font-size:12px; color:var(--text-secondary); flex:1; letter-spacing:0px }
-    .topic-track { height:3px; width:72px; background:rgba(0,0,0,0.08); border-radius:2px; overflow:hidden; flex-shrink:0 }
-    .topic-fill { height:100%; border-radius:2px }
-    .topic-count { font-size:11px; color:var(--text-tertiary); width:16px; text-align:right }
+    .pack-card:active {
+      transform: scale(0.98)
+    }
 
-    .pack-card-actions { padding:12px 20px 16px; display:flex; gap:8px; align-items:center }
-    .pack-dl-btn { flex:1; height:36px; border-radius:50px; border:none; cursor:pointer; font-family:inherit; font-size:13px; font-weight:600; letter-spacing:-0.08px; background:rgba(0,0,0,0.07); color:var(--text-primary); display:flex; align-items:center; justify-content:center; gap:6px; text-decoration:none; transition:transform 120ms var(--spring-snappy), background 120ms var(--spring-snappy) }
-    .pack-dl-btn:active { transform:scale(0.95); background:rgba(0,0,0,0.12) }
-    .pack-dl-btn.primary { background:rgba(30,30,30,0.85); color:rgba(255,255,255,0.95) }
+    .pack-card-top {
+      padding: 20px 20px 16px;
+      position: relative;
+      z-index: 1
+    }
 
-    .llm-copy-btn { width:36px; height:36px; border-radius:50%; border:1px solid rgba(0,0,0,0.10); cursor:pointer; background:rgba(0,0,0,0.06); display:flex; align-items:center; justify-content:center; transition:transform 120ms var(--spring-snappy); position:relative; flex-shrink:0 }
-    .llm-copy-btn:active { transform:scale(0.88) }
-    .llm-tooltip { position:absolute; bottom:calc(100% + 8px); right:0; white-space:nowrap; background:rgba(30,30,40,0.9); backdrop-filter:blur(16px); color:white; font-size:12px; font-weight:500; padding:6px 10px; border-radius:8px; pointer-events:none; opacity:0; transform:translateY(4px); transition:opacity 150ms var(--spring-snappy), transform 150ms var(--spring-snappy); border:1px solid rgba(255,255,255,0.15) }
-    .llm-copy-btn:hover .llm-tooltip { opacity:1; transform:translateY(0) }
+    .pack-card-num {
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.06px;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      margin-bottom: 4px
+    }
 
-    .pack-expand-btn { width:100%; padding:8px 20px; background:none; border:none; border-top:0.5px solid rgba(0,0,0,0.08); color:rgba(0,0,0,0.45); font-family:inherit; font-size:13px; font-weight:500; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:4px; transition:background 120ms }
-    .pack-expand-btn:active { background:rgba(0,0,0,0.04) }
-    .pack-question-list { display:none; border-top:0.5px solid rgba(0,0,0,0.06) }
-    .q-row { display:flex; align-items:center; gap:12px; padding:10px 20px; border-bottom:0.5px solid rgba(0,0,0,0.05); cursor:pointer; transition:background 100ms }
-    .q-row:hover { background:rgba(0,0,0,0.025) }
-    .q-row:last-child { border-bottom:none }
-    .q-source { font-size:12px; color:var(--text-tertiary); width:72px; flex-shrink:0 }
-    .q-num { font-size:13px; font-weight:600; color:var(--text-primary); width:28px; flex-shrink:0 }
-    .q-marks { font-size:12px; color:var(--text-secondary); width:24px; flex-shrink:0 }
-    .q-topic { font-size:11px; font-weight:500; padding:2px 8px; border-radius:20px; flex:1 }
-    .q-sub { font-size:11px; color:var(--text-tertiary); flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
-    .diff-pip { display:flex; gap:2px; flex-shrink:0 }
-    .diff-pip span { width:4px; height:4px; border-radius:50%; background:rgba(255,255,255,0.2) }
-    .diff-pip span.on { background:rgba(255,255,255,0.75) }
+    .pack-card-marks {
+      font-size: 42px;
+      font-weight: 300;
+      letter-spacing: -0.03em;
+      line-height: 1;
+      color: rgba(20, 20, 20, 0.90)
+    }
+
+    .pack-card-marks span {
+      font-size: 17px;
+      color: var(--text-secondary);
+      font-weight: 400
+    }
+
+    .pack-card-meta {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-top: 4px;
+      letter-spacing: -0.08px
+    }
+
+    .topic-bars {
+      padding: 0 20px 4px
+    }
+
+    .topic-bar-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 4px 0
+    }
+
+    .topic-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      flex-shrink: 0
+    }
+
+    .topic-name {
+      font-size: 12px;
+      color: var(--text-secondary);
+      flex: 1;
+      letter-spacing: 0px
+    }
+
+    .topic-track {
+      height: 3px;
+      width: 72px;
+      background: rgba(0, 0, 0, 0.08);
+      border-radius: 2px;
+      overflow: hidden;
+      flex-shrink: 0
+    }
+
+    .topic-fill {
+      height: 100%;
+      border-radius: 2px
+    }
+
+    .topic-count {
+      font-size: 11px;
+      color: var(--text-tertiary);
+      width: 16px;
+      text-align: right
+    }
+
+    .pack-card-actions {
+      padding: 12px 20px 16px;
+      display: flex;
+      gap: 8px;
+      align-items: center
+    }
+
+    .pack-dl-btn {
+      flex: 1;
+      height: 36px;
+      border-radius: 50px;
+      border: none;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: -0.08px;
+      background: rgba(0, 0, 0, 0.07);
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      text-decoration: none;
+      transition: transform 120ms var(--spring-snappy), background 120ms var(--spring-snappy)
+    }
+
+    .pack-dl-btn:active {
+      transform: scale(0.95);
+      background: rgba(0, 0, 0, 0.12)
+    }
+
+    .pack-dl-btn.primary {
+      background: rgba(30, 30, 30, 0.85);
+      color: rgba(255, 255, 255, 0.95)
+    }
+
+    .llm-copy-btn {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      border: 1px solid rgba(0, 0, 0, 0.10);
+      cursor: pointer;
+      background: rgba(0, 0, 0, 0.06);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 120ms var(--spring-snappy);
+      position: relative;
+      flex-shrink: 0
+    }
+
+    .llm-copy-btn:active {
+      transform: scale(0.88)
+    }
+
+    .llm-tooltip {
+      position: absolute;
+      bottom: calc(100% + 8px);
+      right: 0;
+      white-space: nowrap;
+      background: rgba(30, 30, 40, 0.9);
+      backdrop-filter: blur(16px);
+      color: white;
+      font-size: 12px;
+      font-weight: 500;
+      padding: 6px 10px;
+      border-radius: 8px;
+      pointer-events: none;
+      opacity: 0;
+      transform: translateY(4px);
+      transition: opacity 150ms var(--spring-snappy), transform 150ms var(--spring-snappy);
+      border: 1px solid rgba(255, 255, 255, 0.15)
+    }
+
+    .llm-copy-btn:hover .llm-tooltip {
+      opacity: 1;
+      transform: translateY(0)
+    }
+
+    .pack-expand-btn {
+      width: 100%;
+      padding: 8px 20px;
+      background: none;
+      border: none;
+      border-top: 0.5px solid rgba(0, 0, 0, 0.08);
+      color: rgba(0, 0, 0, 0.45);
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      transition: background 120ms
+    }
+
+    .pack-expand-btn:active {
+      background: rgba(0, 0, 0, 0.04)
+    }
+
+    .pack-question-list {
+      display: none;
+      border-top: 0.5px solid rgba(0, 0, 0, 0.06)
+    }
+
+    .q-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 20px;
+      border-bottom: 0.5px solid rgba(0, 0, 0, 0.05);
+      cursor: pointer;
+      transition: background 100ms
+    }
+
+    .q-row:hover {
+      background: rgba(0, 0, 0, 0.025)
+    }
+
+    .q-row:last-child {
+      border-bottom: none
+    }
+
+    .q-source {
+      font-size: 12px;
+      color: var(--text-tertiary);
+      width: 72px;
+      flex-shrink: 0
+    }
+
+    .q-num {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-primary);
+      width: 28px;
+      flex-shrink: 0
+    }
+
+    .q-marks {
+      font-size: 12px;
+      color: var(--text-secondary);
+      width: 24px;
+      flex-shrink: 0
+    }
+
+    .q-topic {
+      font-size: 11px;
+      font-weight: 500;
+      padding: 2px 8px;
+      border-radius: 20px;
+      flex: 1
+    }
+
+    .q-sub {
+      font-size: 11px;
+      color: var(--text-tertiary);
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap
+    }
+
+    .diff-pip {
+      display: flex;
+      gap: 2px;
+      flex-shrink: 0
+    }
+
+    .diff-pip span {
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.2)
+    }
+
+    .diff-pip span.on {
+      background: rgba(255, 255, 255, 0.75)
+    }
 
     /* Hover preview popover */
-    #q-preview-popover { position:fixed; z-index:200; pointer-events:none; display:none; border-radius:14px; overflow:hidden; box-shadow:0 8px 40px rgba(0,0,0,0.18); border:1px solid rgba(255,255,255,0.9) }
-    #q-preview-popover img { display:block; width:300px; max-height:220px; object-fit:contain; background:white }
-    #q-preview-popover.loading { background:rgba(240,240,240,0.95); backdrop-filter:blur(20px); width:300px; height:120px; display:flex; align-items:center; justify-content:center }
-    #q-preview-popover.loading::after { content:'Loading…'; font-size:12px; color:var(--text-secondary) }
+    #q-preview-popover {
+      position: fixed;
+      z-index: 200;
+      pointer-events: none;
+      display: none;
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow: 0 8px 40px rgba(0, 0, 0, 0.18);
+      border: 1px solid rgba(255, 255, 255, 0.9)
+    }
+
+    #q-preview-popover img {
+      display: block;
+      width: 300px;
+      max-height: 220px;
+      object-fit: contain;
+      background: white
+    }
+
+    #q-preview-popover.loading {
+      background: rgba(240, 240, 240, 0.95);
+      backdrop-filter: blur(20px);
+      width: 300px;
+      height: 120px;
+      display: flex;
+      align-items: center;
+      justify-content: center
+    }
+
+    #q-preview-popover.loading::after {
+      content: 'Loading…';
+      font-size: 12px;
+      color: var(--text-secondary)
+    }
 
     /* Warnings */
-    .warning-card { border-radius:16px; padding:16px; margin-bottom:16px; background:rgba(255,149,0,0.08); border:1px solid rgba(255,149,0,0.20) }
-    .warning-title { font-size:13px; font-weight:600; color:rgba(180,90,0,0.9); margin-bottom:6px }
-    .warning-item { font-size:12px; color:rgba(120,60,0,0.85); padding:2px 0 }
+    .warning-card {
+      border-radius: 16px;
+      padding: 16px;
+      margin-bottom: 16px;
+      background: rgba(255, 149, 0, 0.08);
+      border: 1px solid rgba(255, 149, 0, 0.20)
+    }
+
+    .warning-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: rgba(180, 90, 0, 0.9);
+      margin-bottom: 6px
+    }
+
+    .warning-item {
+      font-size: 12px;
+      color: rgba(120, 60, 0, 0.85);
+      padding: 2px 0
+    }
 
     /* Heatmap */
-    .hm-body { padding:16px }
-    .hm-row { display:flex; align-items:center; gap:4px; padding:3px 0 }
-    .hm-label { font-size:11px; color:var(--text-secondary); width:80px; text-align:right; flex-shrink:0 }
-    .hm-cell { width:36px; height:28px; border-radius:6px; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; color:rgba(255,255,255,0.95); flex-shrink:0 }
-    .hm-d-label { width:36px; text-align:center; font-size:10px; color:var(--text-tertiary); font-weight:600 }
+    .hm-body {
+      padding: 16px
+    }
+
+    .hm-row {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 0
+    }
+
+    .hm-label {
+      font-size: 11px;
+      color: var(--text-secondary);
+      width: 80px;
+      text-align: right;
+      flex-shrink: 0
+    }
+
+    .hm-cell {
+      width: 36px;
+      height: 28px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 700;
+      color: rgba(255, 255, 255, 0.95);
+      flex-shrink: 0
+    }
+
+    .hm-d-label {
+      width: 36px;
+      text-align: center;
+      font-size: 10px;
+      color: var(--text-tertiary);
+      font-weight: 600
+    }
 
     /* Filter / sliders */
-    .slider-row { display:flex; align-items:center; gap:10px; margin-bottom:8px }
-    .slider-label { font-size:13px; color:var(--text-secondary); width:60px }
-    input[type=range] { flex:1; accent-color:white; height:3px; cursor:pointer }
-    .slider-val { font-size:13px; font-weight:600; color:var(--text-primary); width:16px; text-align:right }
+    .slider-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 8px
+    }
 
-    .ios-toggle-row { display:flex; align-items:center; justify-content:space-between; padding:10px 0; border-bottom:0.5px solid rgba(0,0,0,0.08) }
-    .ios-toggle-row:last-child { border-bottom:none }
-    .ios-toggle-info .name { font-size:15px; color:var(--text-primary) }
-    .ios-toggle-info .desc { font-size:12px; color:var(--text-secondary); margin-top:2px }
-    .ios-toggle { position:relative; width:51px; height:31px; flex-shrink:0 }
-    .ios-toggle input { opacity:0; width:0; height:0 }
-    .ios-toggle-track { position:absolute; inset:0; background:rgba(0,0,0,0.15); border-radius:16px; cursor:pointer; transition:background 200ms }
-    .ios-toggle input:checked ~ .ios-toggle-track { background:var(--green) }
-    .ios-toggle-thumb { position:absolute; top:3px; left:3px; width:25px; height:25px; background:white; border-radius:50%; box-shadow:0 2px 6px rgba(0,0,0,0.3); transition:transform 200ms var(--spring-default); pointer-events:none }
-    .ios-toggle input:checked ~ .ios-toggle-thumb { transform:translateX(20px) }
+    .slider-label {
+      font-size: 13px;
+      color: var(--text-secondary);
+      width: 60px
+    }
+
+    input[type=range] {
+      flex: 1;
+      accent-color: white;
+      height: 3px;
+      cursor: pointer
+    }
+
+    .slider-val {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-primary);
+      width: 16px;
+      text-align: right
+    }
+
+    .ios-toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 0;
+      border-bottom: 0.5px solid rgba(0, 0, 0, 0.08)
+    }
+
+    .ios-toggle-row:last-child {
+      border-bottom: none
+    }
+
+    .ios-toggle-info .name {
+      font-size: 15px;
+      color: var(--text-primary)
+    }
+
+    .ios-toggle-info .desc {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-top: 2px
+    }
+
+    .ios-toggle {
+      position: relative;
+      width: 51px;
+      height: 31px;
+      flex-shrink: 0
+    }
+
+    .ios-toggle input {
+      opacity: 0;
+      width: 0;
+      height: 0
+    }
+
+    .ios-toggle-track {
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.15);
+      border-radius: 16px;
+      cursor: pointer;
+      transition: background 200ms
+    }
+
+    .ios-toggle input:checked~.ios-toggle-track {
+      background: var(--green)
+    }
+
+    .ios-toggle-thumb {
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 25px;
+      height: 25px;
+      background: white;
+      border-radius: 50%;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+      transition: transform 200ms var(--spring-default);
+      pointer-events: none
+    }
+
+    .ios-toggle input:checked~.ios-toggle-thumb {
+      transform: translateX(20px)
+    }
 
     /* Regen button */
-    #regen-btn { position:fixed; bottom:calc(42px + 60px + 12px); right:20px; height:36px; padding:0 16px; border-radius:50px; border:none; cursor:pointer; font-family:inherit; font-size:13px; font-weight:600; background:rgba(255,255,255,0.80); color:var(--text-primary); backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px); border:1px solid rgba(0,0,0,0.10); z-index:39; display:none; transition:transform 120ms var(--spring-snappy) }
-    #regen-btn:active { transform:scale(0.95) }
+    #regen-btn {
+      position: fixed;
+      bottom: calc(42px + 60px + 12px);
+      right: 20px;
+      height: 36px;
+      padding: 0 16px;
+      border-radius: 50px;
+      border: none;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 600;
+      background: rgba(255, 255, 255, 0.80);
+      color: var(--text-primary);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(0, 0, 0, 0.10);
+      z-index: 39;
+      display: none;
+      transition: transform 120ms var(--spring-snappy)
+    }
+
+    #regen-btn:active {
+      transform: scale(0.95)
+    }
 
     /* Stagger + loading */
-    @keyframes staggerIn { from { opacity:0; transform:translateY(16px) } to { opacity:1; transform:translateY(0) } }
-    .stagger-item { opacity:0; animation:staggerIn 400ms var(--spring-decel) forwards }
-    @keyframes pulse { 0%,100% { opacity:0.4 } 50% { opacity:0.8 } }
-    .pulsing { animation:pulse 1.5s ease infinite }
+    @keyframes staggerIn {
+      from {
+        opacity: 0;
+        transform: translateY(16px)
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0)
+      }
+    }
+
+    .stagger-item {
+      opacity: 0;
+      animation: staggerIn 400ms var(--spring-decel) forwards
+    }
+
+    @keyframes pulse {
+
+      0%,
+      100% {
+        opacity: 0.4
+      }
+
+      50% {
+        opacity: 0.8
+      }
+    }
+
+    .pulsing {
+      animation: pulse 1.5s ease infinite
+    }
 
     /* Empty state */
-    .empty-state { text-align:center; padding:40px 20px; color:var(--text-tertiary) }
-    .empty-icon { font-size:32px; margin-bottom:12px }
-    .empty-title { font-size:17px; font-weight:600; color:rgba(0,0,0,0.40) }
-    .empty-sub { font-size:14px; color:rgba(0,0,0,0.25); margin-top:6px; line-height:20px }
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--text-tertiary)
+    }
+
+    .empty-icon {
+      font-size: 32px;
+      margin-bottom: 12px
+    }
+
+    .empty-title {
+      font-size: 17px;
+      font-weight: 600;
+      color: rgba(0, 0, 0, 0.40)
+    }
+
+    .empty-sub {
+      font-size: 14px;
+      color: rgba(0, 0, 0, 0.25);
+      margin-top: 6px;
+      line-height: 20px
+    }
 
     /* ─── Custom Pack Builder ─────────────────────────────────────────────────── */
-    #view-builder .section-title { margin-bottom:8px }
-    .builder-intro { font-size:14px; color:var(--text-secondary); line-height:20px; margin-bottom:20px }
-    .topic-group { border-radius:16px; margin-bottom:12px; overflow:hidden }
-    .topic-group-header { display:flex; align-items:center; gap:10px; padding:14px 16px; cursor:pointer; user-select:none }
-    .topic-group-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0 }
-    .topic-group-name { font-size:15px; font-weight:600; color:var(--text-primary); flex:1 }
-    .topic-group-count { font-size:12px; color:var(--text-secondary) }
-    .topic-group-arrow { font-size:11px; color:var(--text-tertiary); transition:transform 200ms }
-    .topic-group.open .topic-group-arrow { transform:rotate(180deg) }
-    .subtopic-list { display:none; padding:0 16px 12px }
-    .topic-group.open .subtopic-list { display:block }
-    .subtopic-chip-row { display:flex; flex-wrap:wrap; gap:6px }
-    .subtopic-chip { padding:5px 12px; border-radius:20px; font-size:12px; font-weight:500; border:1.5px solid rgba(0,0,0,0.10); cursor:pointer; transition:all 150ms; user-select:none; color:var(--text-secondary); background:rgba(255,255,255,0.60) }
-    .subtopic-chip.selected { color:white; border-color:transparent }
-    .builder-footer { position:sticky; bottom:0; padding:12px 0 0; background:transparent }
-    .builder-stats { display:flex; gap:8px; margin-bottom:10px }
-    .builder-stat { flex:1; background:rgba(255,255,255,0.65); border:1px solid rgba(0,0,0,0.08); border-radius:12px; padding:10px 12px }
-    .builder-stat-val { font-size:18px; font-weight:700; color:var(--text-primary) }
-    .builder-stat-label { font-size:11px; color:var(--text-secondary); margin-top:2px }
-    #build-pack-btn { display:none }
+    #view-builder .section-title {
+      margin-bottom: 8px
+    }
+
+    .builder-intro {
+      font-size: 14px;
+      color: var(--text-secondary);
+      line-height: 20px;
+      margin-bottom: 20px
+    }
+
+    .topic-group {
+      border-radius: 16px;
+      margin-bottom: 12px;
+      overflow: hidden
+    }
+
+    .topic-group-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 14px 16px;
+      cursor: pointer;
+      user-select: none
+    }
+
+    .topic-group-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0
+    }
+
+    .topic-group-name {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text-primary);
+      flex: 1
+    }
+
+    .topic-group-count {
+      font-size: 12px;
+      color: var(--text-secondary)
+    }
+
+    .topic-group-arrow {
+      font-size: 11px;
+      color: var(--text-tertiary);
+      transition: transform 200ms
+    }
+
+    .topic-group.open .topic-group-arrow {
+      transform: rotate(180deg)
+    }
+
+    .subtopic-list {
+      display: none;
+      padding: 0 16px 12px
+    }
+
+    .topic-group.open .subtopic-list {
+      display: block
+    }
+
+    .subtopic-chip-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px
+    }
+
+    .subtopic-chip {
+      padding: 5px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 500;
+      border: 1.5px solid rgba(0, 0, 0, 0.10);
+      cursor: pointer;
+      transition: all 150ms;
+      user-select: none;
+      color: var(--text-secondary);
+      background: rgba(255, 255, 255, 0.60)
+    }
+
+    .subtopic-chip.selected {
+      color: white;
+      border-color: transparent
+    }
+
+    .builder-footer {
+      position: sticky;
+      bottom: 0;
+      padding: 12px 0 0;
+      background: transparent
+    }
+
+    .builder-stats {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 10px
+    }
+
+    .builder-stat {
+      flex: 1;
+      background: rgba(255, 255, 255, 0.65);
+      border: 1px solid rgba(0, 0, 0, 0.08);
+      border-radius: 12px;
+      padding: 10px 12px
+    }
+
+    .builder-stat-val {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text-primary)
+    }
+
+    .builder-stat-label {
+      font-size: 11px;
+      color: var(--text-secondary);
+      margin-top: 2px
+    }
+
+    #build-pack-btn {
+      display: none
+    }
 
     /* Profile / session */
-    .usage-bar-track { height:6px; background:rgba(0,0,0,0.08); border-radius:3px; overflow:hidden; margin-top:6px }
-    .usage-bar-fill { height:100%; border-radius:3px; background:rgba(30,30,30,0.60); transition:width 600ms var(--spring-default) }
+    .usage-bar-track {
+      height: 6px;
+      background: rgba(0, 0, 0, 0.08);
+      border-radius: 3px;
+      overflow: hidden;
+      margin-top: 6px
+    }
+
+    .usage-bar-fill {
+      height: 100%;
+      border-radius: 3px;
+      background: rgba(30, 30, 30, 0.60);
+      transition: width 600ms var(--spring-default)
+    }
 
     /* Missing key banner */
-    #missing-key-banner { display:none; position:fixed; top:0; left:0; right:0; z-index:200; padding:13px 20px; background:rgba(255,59,48,0.96); backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px); color:white; font-size:13px; font-weight:500; text-align:center; line-height:18px }
-    #missing-key-banner.visible { display:block; animation:staggerIn 300ms var(--spring-decel) forwards }
-    #missing-key-banner button { margin-left:10px; padding:4px 12px; border-radius:20px; border:1.5px solid rgba(255,255,255,0.55); background:none; color:white; font-family:inherit; font-size:12px; font-weight:600; cursor:pointer }
+    #missing-key-banner {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 200;
+      padding: 13px 20px;
+      background: rgba(255, 59, 48, 0.96);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      color: white;
+      font-size: 13px;
+      font-weight: 500;
+      text-align: center;
+      line-height: 18px
+    }
+
+    #missing-key-banner.visible {
+      display: block;
+      animation: staggerIn 300ms var(--spring-decel) forwards
+    }
+
+    #missing-key-banner button {
+      margin-left: 10px;
+      padding: 4px 12px;
+      border-radius: 20px;
+      border: 1.5px solid rgba(255, 255, 255, 0.55);
+      background: none;
+      color: white;
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer
+    }
 
     /* Score entry */
-    .score-entry-section { display:none; border-top:0.5px solid rgba(0,0,0,0.07); padding:16px 20px 8px; background:rgba(248,248,248,0.5) }
-    .score-entry-section.visible { display:block }
-    .score-entry-title { font-size:11px; font-weight:600; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:10px }
-    .score-rows { display:flex; flex-direction:column; gap:5px; max-height:220px; overflow-y:auto }
-    .score-row { display:flex; align-items:center; gap:8px; padding:3px 0 }
-    .score-row-label { font-size:12px; color:var(--text-secondary); width:88px; flex-shrink:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
-    .score-input { width:44px; height:30px; border-radius:8px; border:1.5px solid rgba(0,0,0,0.12); background:rgba(255,255,255,0.85); font-family:inherit; font-size:14px; font-weight:600; text-align:center; color:var(--text-primary); outline:none; transition:border-color 150ms }
-    .score-input:focus { border-color:rgba(0,0,0,0.4) }
-    .score-max { font-size:11px; color:var(--text-tertiary) }
-    .score-submit-btn { margin-top:12px; width:100%; padding:10px; border-radius:50px; border:none; background:rgba(30,30,30,0.85); color:white; font-family:inherit; font-size:13px; font-weight:600; cursor:pointer; transition:transform 120ms var(--spring-snappy) }
-    .score-submit-btn:active { transform:scale(0.97) }
-    .score-submit-btn:disabled { opacity:0.5; cursor:default }
-    .pack-attempted-badge { display:inline-flex; align-items:center; gap:3px; font-size:10px; font-weight:600; padding:2px 7px; border-radius:20px; background:rgba(52,199,89,0.12); color:rgba(25,120,50,0.9); margin-left:6px }
+    .score-entry-section {
+      display: none;
+      border-top: 0.5px solid rgba(0, 0, 0, 0.07);
+      padding: 16px 20px 8px;
+      background: rgba(248, 248, 248, 0.5)
+    }
+
+    .score-entry-section.visible {
+      display: block
+    }
+
+    .score-entry-title {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 10px
+    }
+
+    .score-rows {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      max-height: 220px;
+      overflow-y: auto
+    }
+
+    .score-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 3px 0
+    }
+
+    .score-row-label {
+      font-size: 12px;
+      color: var(--text-secondary);
+      width: 88px;
+      flex-shrink: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap
+    }
+
+    .score-input {
+      width: 44px;
+      height: 30px;
+      border-radius: 8px;
+      border: 1.5px solid rgba(0, 0, 0, 0.12);
+      background: rgba(255, 255, 255, 0.85);
+      font-family: inherit;
+      font-size: 14px;
+      font-weight: 600;
+      text-align: center;
+      color: var(--text-primary);
+      outline: none;
+      transition: border-color 150ms
+    }
+
+    .score-input:focus {
+      border-color: rgba(0, 0, 0, 0.4)
+    }
+
+    .score-max {
+      font-size: 11px;
+      color: var(--text-tertiary)
+    }
+
+    .score-submit-btn {
+      margin-top: 12px;
+      width: 100%;
+      padding: 10px;
+      border-radius: 50px;
+      border: none;
+      background: rgba(30, 30, 30, 0.85);
+      color: white;
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 120ms var(--spring-snappy)
+    }
+
+    .score-submit-btn:active {
+      transform: scale(0.97)
+    }
+
+    .score-submit-btn:disabled {
+      opacity: 0.5;
+      cursor: default
+    }
+
+    .pack-attempted-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      font-size: 10px;
+      font-weight: 600;
+      padding: 2px 7px;
+      border-radius: 20px;
+      background: rgba(52, 199, 89, 0.12);
+      color: rgba(25, 120, 50, 0.9);
+      margin-left: 6px
+    }
 
     /* Progress tab */
-    .progress-topic-row { display:flex; align-items:center; gap:10px; padding:11px 0; border-bottom:0.5px solid rgba(0,0,0,0.06); cursor:pointer }
-    .progress-topic-row:last-child { border-bottom:none }
-    .progress-topic-dot { width:9px; height:9px; border-radius:50%; flex-shrink:0 }
-    .progress-topic-name { font-size:14px; color:var(--text-primary); flex:1; font-weight:500 }
-    .progress-bar-wrap { width:72px; height:5px; background:rgba(0,0,0,0.08); border-radius:3px; overflow:hidden; flex-shrink:0 }
-    .progress-bar-fill { height:100%; border-radius:3px; transition:width 700ms var(--spring-default) }
-    .progress-pct { font-size:12px; font-weight:700; width:34px; text-align:right; flex-shrink:0 }
-    .progress-count { font-size:11px; color:var(--text-tertiary); width:26px; text-align:right; flex-shrink:0 }
-    .subtopic-list-progress { display:none; padding:0 0 6px 20px }
-    .subtopic-list-progress.open { display:block }
-    .subtopic-progress-row { display:flex; align-items:center; gap:8px; padding:4px 0 }
-    .subtopic-progress-name { font-size:12px; color:var(--text-secondary); flex:1 }
-    .subtopic-pct { font-size:11px; color:var(--text-tertiary); font-weight:600; width:34px; text-align:right }
+    .progress-topic-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 11px 0;
+      border-bottom: 0.5px solid rgba(0, 0, 0, 0.06);
+      cursor: pointer
+    }
+
+    .progress-topic-row:last-child {
+      border-bottom: none
+    }
+
+    .progress-topic-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      flex-shrink: 0
+    }
+
+    .progress-topic-name {
+      font-size: 14px;
+      color: var(--text-primary);
+      flex: 1;
+      font-weight: 500
+    }
+
+    .progress-bar-wrap {
+      width: 72px;
+      height: 5px;
+      background: rgba(0, 0, 0, 0.08);
+      border-radius: 3px;
+      overflow: hidden;
+      flex-shrink: 0
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      border-radius: 3px;
+      transition: width 700ms var(--spring-default)
+    }
+
+    .progress-pct {
+      font-size: 12px;
+      font-weight: 700;
+      width: 34px;
+      text-align: right;
+      flex-shrink: 0
+    }
+
+    .progress-count {
+      font-size: 11px;
+      color: var(--text-tertiary);
+      width: 26px;
+      text-align: right;
+      flex-shrink: 0
+    }
+
+    .subtopic-list-progress {
+      display: none;
+      padding: 0 0 6px 20px
+    }
+
+    .subtopic-list-progress.open {
+      display: block
+    }
+
+    .subtopic-progress-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 4px 0
+    }
+
+    .subtopic-progress-name {
+      font-size: 12px;
+      color: var(--text-secondary);
+      flex: 1
+    }
+
+    .subtopic-pct {
+      font-size: 11px;
+      color: var(--text-tertiary);
+      font-weight: 600;
+      width: 34px;
+      text-align: right
+    }
 
     /* History tab */
-    .history-card { border-radius:16px; margin-bottom:10px; overflow:hidden }
-    .history-card-body { padding:14px 16px; display:flex; align-items:center; gap:12px }
-    .history-score-circle { width:44px; height:44px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700; color:white }
-    .history-info { flex:1; min-width:0 }
-    .history-pack-name { font-size:14px; font-weight:600; color:var(--text-primary); margin-bottom:2px }
-    .history-meta { font-size:12px; color:var(--text-secondary) }
-    .paper-stats-row { display:flex; align-items:center; gap:10px; padding:9px 0; border-bottom:0.5px solid rgba(0,0,0,0.06) }
-    .paper-stats-row:last-child { border-bottom:none }
-    .paper-key-text { font-size:11px; font-family:monospace; color:var(--text-secondary); flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
-    .paper-q-count { font-size:11px; color:var(--text-tertiary); flex-shrink:0 }
-    .paper-pct-badge { font-size:11px; font-weight:700; padding:2px 7px; border-radius:20px; flex-shrink:0 }
-    .sr-badge { font-size:9px; font-weight:700; padding:1px 6px; border-radius:10px; background:rgba(0,122,255,0.12); color:rgba(0,80,200,0.9); margin-left:6px; vertical-align:middle }
+    .history-card {
+      border-radius: 16px;
+      margin-bottom: 10px;
+      overflow: hidden
+    }
+
+    .history-card-body {
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px
+    }
+
+    .history-score-circle {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 700;
+      color: white
+    }
+
+    .history-info {
+      flex: 1;
+      min-width: 0
+    }
+
+    .history-pack-name {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 2px
+    }
+
+    .history-meta {
+      font-size: 12px;
+      color: var(--text-secondary)
+    }
+
+    .paper-stats-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 0;
+      border-bottom: 0.5px solid rgba(0, 0, 0, 0.06)
+    }
+
+    .paper-stats-row:last-child {
+      border-bottom: none
+    }
+
+    .paper-key-text {
+      font-size: 11px;
+      font-family: monospace;
+      color: var(--text-secondary);
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap
+    }
+
+    .paper-q-count {
+      font-size: 11px;
+      color: var(--text-tertiary);
+      flex-shrink: 0
+    }
+
+    .paper-pct-badge {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 20px;
+      flex-shrink: 0
+    }
+
+    .sr-badge {
+      font-size: 9px;
+      font-weight: 700;
+      padding: 1px 6px;
+      border-radius: 10px;
+      background: rgba(0, 122, 255, 0.12);
+      color: rgba(0, 80, 200, 0.9);
+      margin-left: 6px;
+      vertical-align: middle
+    }
   </style>
 </head>
+
 <body>
   <svg width="0" height="0" style="position:absolute;pointer-events:none">
     <defs>
       <filter id="liquid-distort">
-        <feTurbulence type="fractalNoise" baseFrequency="0.9 0.9" numOctaves="2" seed="2" result="noise"/>
-        <feDisplacementMap in="SourceGraphic" in2="noise" scale="4" xChannelSelector="R" yChannelSelector="G"/>
+        <feTurbulence type="fractalNoise" baseFrequency="0.9 0.9" numOctaves="2" seed="2" result="noise" />
+        <feDisplacementMap in="SourceGraphic" in2="noise" scale="4" xChannelSelector="R" yChannelSelector="G" />
       </filter>
     </defs>
   </svg>
@@ -351,29 +1887,53 @@
   <div id="wallpaper"><canvas id="mesh-canvas"></canvas></div>
   <div class="scroll-edge scroll-edge-top"></div>
   <div class="scroll-edge scroll-edge-bottom"></div>
-  <div id="progress-wrap" class="hidden"><div id="progress-fill"></div></div>
+  <div id="progress-wrap" class="hidden">
+    <div id="progress-fill"></div>
+  </div>
 
   <!-- ── ONBOARDING ── -->
   <div id="onboarding">
 
     <!-- Welcome -->
-    <div id="screen-welcome" style="width:100%;max-width:390px;padding:0 28px;display:flex;flex-direction:column;align-items:center;text-align:center">
+    <div id="screen-welcome"
+      style="width:100%;max-width:390px;padding:0 28px;display:flex;flex-direction:column;align-items:center;text-align:center">
       <div class="welcome-icon glass materialize" style="margin-bottom:32px">📐</div>
       <div class="welcome-title" style="animation:staggerIn 400ms 80ms var(--spring-decel) both">PackGen</div>
-      <div class="welcome-sub" style="animation:staggerIn 400ms 140ms var(--spring-decel) both;margin-bottom:44px">Practice papers, perfectly assembled.<br>Q18+ from every Edexcel 4MA1 paper.</div>
+      <div class="welcome-sub" style="animation:staggerIn 400ms 140ms var(--spring-decel) both;margin-bottom:44px">
+        Practice papers, perfectly assembled.<br>Q18+ from every Edexcel 4MA1 paper.</div>
       <div class="welcome-features" style="animation:staggerIn 400ms 200ms var(--spring-decel) both">
-        <div class="feat-row"><div class="feat-icon glass">🗂</div><div><div class="feat-text-title">Drop your papers</div><div class="feat-text-sub">Bulk upload 100+ QP + MS pairs at once</div></div></div>
-        <div class="feat-row"><div class="feat-icon glass">🧠</div><div><div class="feat-text-title">AI classifies everything</div><div class="feat-text-sub">Every question tagged by topic, sub-topic & difficulty</div></div></div>
-        <div class="feat-row"><div class="feat-icon glass">📦</div><div><div class="feat-text-title">~100-mark packs, instantly</div><div class="feat-text-sub">Even mark spread, no cross-pack repeats</div></div></div>
+        <div class="feat-row">
+          <div class="feat-icon glass">🗂</div>
+          <div>
+            <div class="feat-text-title">Drop your papers</div>
+            <div class="feat-text-sub">Bulk upload 100+ QP + MS pairs at once</div>
+          </div>
+        </div>
+        <div class="feat-row">
+          <div class="feat-icon glass">🧠</div>
+          <div>
+            <div class="feat-text-title">AI classifies everything</div>
+            <div class="feat-text-sub">Every question tagged by topic, sub-topic & difficulty</div>
+          </div>
+        </div>
+        <div class="feat-row">
+          <div class="feat-icon glass">📦</div>
+          <div>
+            <div class="feat-text-title">~100-mark packs, instantly</div>
+            <div class="feat-text-sub">Even mark spread, no cross-pack repeats</div>
+          </div>
+        </div>
       </div>
-      <button class="cta-btn primary materialize" onclick="goToAuth()" style="animation:staggerIn 400ms 280ms var(--spring-decel) both">Get Started</button>
+      <button class="cta-btn primary materialize" onclick="goToAuth()"
+        style="animation:staggerIn 400ms 280ms var(--spring-decel) both">Get Started</button>
       <div style="height:44px"></div>
     </div>
 
     <!-- Auth screen -->
     <div id="screen-auth">
       <div style="text-align:center;margin-bottom:28px">
-        <div style="font-size:28px;font-weight:700;letter-spacing:-0.3px;color:var(--text-primary);margin-bottom:8px">Sign in</div>
+        <div style="font-size:28px;font-weight:700;letter-spacing:-0.3px;color:var(--text-primary);margin-bottom:8px">
+          Sign in</div>
         <div style="font-size:15px;color:var(--text-secondary)">Continue with your PackGen account</div>
       </div>
       <div class="auth-tabs">
@@ -382,20 +1942,25 @@
       </div>
       <div id="auth-error" class="auth-error"></div>
       <input class="auth-field" type="email" id="auth-email" placeholder="Email" autocomplete="email">
-      <input class="auth-field" type="password" id="auth-password" placeholder="Password" autocomplete="current-password">
+      <input class="auth-field" type="password" id="auth-password" placeholder="Password"
+        autocomplete="current-password">
       <div id="auth-signup-extra" style="display:none">
         <input class="auth-field" type="password" id="auth-password2" placeholder="Confirm password">
       </div>
-      <button class="cta-btn primary" id="auth-submit-btn" onclick="submitAuth()" style="margin-bottom:12px">Sign In</button>
+      <button class="cta-btn primary" id="auth-submit-btn" onclick="submitAuth()" style="margin-bottom:12px">Sign
+        In</button>
       <button class="cta-btn glass-btn" onclick="skipAuth()" style="font-size:15px">Continue without account</button>
       <div style="height:44px"></div>
     </div>
 
     <!-- Upload -->
-    <div id="screen-upload" style="display:none;width:100%;max-width:390px;padding:0 24px">
+    <div id="screen-upload"
+      style="display:none;width:100%;max-width:390px;padding:0 24px;overflow-y:auto;max-height:100vh;padding-top:20px;flex-direction:column;align-items:stretch">
       <div style="text-align:center;margin-bottom:28px">
-        <div style="font-size:28px;font-weight:700;letter-spacing:-0.3px;color:var(--text-primary);margin-bottom:8px">Upload your papers</div>
-        <div style="font-size:15px;color:var(--text-secondary);letter-spacing:-0.23px;line-height:20px">Drop all your QP and MS PDFs.<br>Pairs are detected automatically.</div>
+        <div style="font-size:28px;font-weight:700;letter-spacing:-0.3px;color:var(--text-primary);margin-bottom:8px">
+          Upload your papers</div>
+        <div style="font-size:15px;color:var(--text-secondary);letter-spacing:-0.23px;line-height:20px">Drop all your QP
+          and MS PDFs.<br>Pairs are detected automatically.</div>
       </div>
       <div class="drop-zone glass" id="drop-zone">
         <input type="file" id="file-input" multiple accept=".pdf">
@@ -404,17 +1969,21 @@
         <div class="drop-sub">June 2022, June 22, June 2020 (R)<br>QP + MS · all naming formats</div>
         <div class="drop-count" id="drop-count"></div>
       </div>
-      <div style="margin-top:12px;display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:14px;cursor:pointer;position:relative" class="glass">
+      <div
+        style="margin-top:12px;display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:14px;cursor:pointer;position:relative"
+        class="glass">
         <input type="file" id="spec-input" accept=".pdf" style="position:absolute;inset:0;opacity:0;cursor:pointer">
         <span style="font-size:18px">📋</span>
         <div>
-          <div style="font-size:13px;font-weight:600;color:var(--text-primary)">Spec PDF <span style="font-weight:400;color:var(--text-secondary)">(optional)</span></div>
+          <div style="font-size:13px;font-weight:600;color:var(--text-primary)">Spec PDF <span
+              style="font-weight:400;color:var(--text-secondary)">(optional)</span></div>
           <div style="font-size:12px;color:var(--text-secondary)" id="spec-name">Improves AI classification</div>
         </div>
       </div>
       <div style="margin-top:20px;display:flex;flex-direction:column;gap:10px">
         <button class="cta-btn primary" id="btn-start" onclick="startPipeline()" disabled>Begin</button>
-        <button class="cta-btn glass-btn" id="btn-load-session" onclick="openSessionPicker()" style="font-size:15px">Load Saved Session</button>
+        <button class="cta-btn glass-btn" id="btn-load-session" onclick="openSessionPicker()"
+          style="font-size:15px">Load Saved Session</button>
       </div>
       <div id="session-picker" style="display:none;margin-top:12px">
         <div id="session-list" style="display:flex;flex-direction:column;gap:6px"></div>
@@ -423,58 +1992,104 @@
     </div>
 
     <!-- Pipeline -->
-    <div id="screen-pipeline" style="display:none;width:100%;max-width:390px;padding:0 24px">
-      <div style="text-align:center;margin-bottom:24px">
-        <div id="pipeline-headline" style="font-size:28px;font-weight:700;letter-spacing:-0.3px;color:var(--text-primary);margin-bottom:8px">Processing…</div>
-        <div id="pipeline-sub" style="font-size:15px;color:var(--text-secondary);letter-spacing:-0.23px">Setting up your papers</div>
+    <div id="screen-pipeline"
+      style="display:none;width:100%;max-width:390px;padding:0 24px;overflow-y:auto;max-height:100vh">
+      <div style="text-align:center;margin-bottom:24px;padding-top:20px">
+        <div id="pipeline-headline"
+          style="font-size:28px;font-weight:700;letter-spacing:-0.3px;color:var(--text-primary);margin-bottom:8px">
+          Processing…</div>
+        <div id="pipeline-sub" style="font-size:15px;color:var(--text-secondary);letter-spacing:-0.23px">Setting up your
+          papers</div>
       </div>
-      <div class="step-card glass active" id="step-scan">
-        <div class="step-header">
-          <div class="step-num active" id="sn-scan">1</div>
-          <div><div class="step-title">Scanning papers</div><div class="step-sub" id="sub-scan">Finding QP + MS pairs…</div></div>
-          <div class="step-warn-badge" id="warn-badge-scan">!</div>
-        </div>
-        <div class="step-body">
-          <div class="inline-progress"><div class="inline-bar-track"><div class="inline-bar-fill" id="bar-scan"></div></div><div class="inline-msg" id="msg-scan"></div></div>
-          <div class="pairs-row" id="pairs-chips"></div>
-          <div id="step-warnings-scan"></div>
-        </div>
-      </div>
-      <div class="step-card glass" id="step-extract">
-        <div class="step-header">
-          <div class="step-num" id="sn-extract">2</div>
-          <div><div class="step-title">Extracting questions</div><div class="step-sub" id="sub-extract">Pulling Q18+ from every paper</div></div>
-          <div class="step-warn-badge" id="warn-badge-extract">!</div>
-        </div>
-        <div class="step-body">
-          <div class="inline-progress"><div class="inline-bar-track"><div class="inline-bar-fill" id="bar-extract"></div></div><div class="inline-msg" id="msg-extract"></div></div>
-          <div class="stats-mini" id="stats-mini" style="display:none">
-            <div class="stat-mini"><div class="stat-mini-val" id="sm-q">0</div><div class="stat-mini-label">Questions</div></div>
-            <div class="stat-mini"><div class="stat-mini-val" id="sm-m">0</div><div class="stat-mini-label">Marks</div></div>
-            <div class="stat-mini"><div class="stat-mini-val" id="sm-p">~0</div><div class="stat-mini-label">Est. packs</div></div>
+      <div style="display:flex;flex-direction:column;gap:12px;padding-bottom:40px">
+        <div class="step-card glass active" id="step-scan">
+          <div class="step-header">
+            <div class="step-num active" id="sn-scan">1</div>
+            <div>
+              <div class="step-title">Scanning papers</div>
+              <div class="step-sub" id="sub-scan">Finding QP + MS pairs…</div>
+            </div>
+            <div class="step-warn-badge" id="warn-badge-scan">!</div>
           </div>
-          <div id="step-warnings-extract"></div>
+          <div class="step-body">
+            <div class="inline-progress">
+              <div class="inline-bar-track">
+                <div class="inline-bar-fill" id="bar-scan"></div>
+              </div>
+              <div class="inline-msg" id="msg-scan"></div>
+            </div>
+            <div class="pairs-row" id="pairs-chips"></div>
+            <div id="step-warnings-scan"></div>
+          </div>
         </div>
-      </div>
-      <div class="step-card glass" id="step-classify">
-        <div class="step-header">
-          <div class="step-num" id="sn-classify">3</div>
-          <div><div class="step-title">Classifying with AI</div><div class="step-sub" id="sub-classify">Topics, sub-topics, difficulty</div></div>
+        <div class="step-card glass" id="step-extract">
+          <div class="step-header">
+            <div class="step-num" id="sn-extract">2</div>
+            <div>
+              <div class="step-title">Extracting questions</div>
+              <div class="step-sub" id="sub-extract">Pulling Q18+ from every paper</div>
+            </div>
+            <div class="step-warn-badge" id="warn-badge-extract">!</div>
+          </div>
+          <div class="step-body">
+            <div class="inline-progress">
+              <div class="inline-bar-track">
+                <div class="inline-bar-fill" id="bar-extract"></div>
+              </div>
+              <div class="inline-msg" id="msg-extract"></div>
+            </div>
+            <div class="stats-mini" id="stats-mini" style="display:none">
+              <div class="stat-mini">
+                <div class="stat-mini-val" id="sm-q">0</div>
+                <div class="stat-mini-label">Questions</div>
+              </div>
+              <div class="stat-mini">
+                <div class="stat-mini-val" id="sm-m">0</div>
+                <div class="stat-mini-label">Marks</div>
+              </div>
+              <div class="stat-mini">
+                <div class="stat-mini-val" id="sm-p">~0</div>
+                <div class="stat-mini-label">Est. packs</div>
+              </div>
+            </div>
+            <div id="step-warnings-extract"></div>
+          </div>
         </div>
-        <div class="step-body">
-          <div class="inline-progress"><div class="inline-bar-track"><div class="inline-bar-fill" id="bar-classify"></div></div><div class="inline-msg" id="msg-classify"></div></div>
+        <div class="step-card glass" id="step-classify">
+          <div class="step-header">
+            <div class="step-num" id="sn-classify">3</div>
+            <div>
+              <div class="step-title">Classifying with AI</div>
+              <div class="step-sub" id="sub-classify">Topics, sub-topics, difficulty</div>
+            </div>
+          </div>
+          <div class="step-body">
+            <div class="inline-progress">
+              <div class="inline-bar-track">
+                <div class="inline-bar-fill" id="bar-classify"></div>
+              </div>
+              <div class="inline-msg" id="msg-classify"></div>
+            </div>
+          </div>
         </div>
-      </div>
-      <div class="step-card glass" id="step-generate">
-        <div class="step-header">
-          <div class="step-num" id="sn-generate">4</div>
-          <div><div class="step-title">Generating packs</div><div class="step-sub" id="sub-generate">Building ~100-mark practice papers</div></div>
+        <div class="step-card glass" id="step-generate">
+          <div class="step-header">
+            <div class="step-num" id="sn-generate">4</div>
+            <div>
+              <div class="step-title">Generating packs</div>
+              <div class="step-sub" id="sub-generate">Building ~100-mark practice papers</div>
+            </div>
+          </div>
+          <div class="step-body">
+            <div class="inline-progress">
+              <div class="inline-bar-track">
+                <div class="inline-bar-fill" id="bar-generate"></div>
+              </div>
+              <div class="inline-msg" id="msg-generate"></div>
+            </div>
+          </div>
         </div>
-        <div class="step-body">
-          <div class="inline-progress"><div class="inline-bar-track"><div class="inline-bar-fill" id="bar-generate"></div></div><div class="inline-msg" id="msg-generate"></div></div>
-        </div>
-      </div>
-      <div style="height:44px"></div>
+      </div><!-- /flex column wrapper -->
     </div>
   </div>
 
@@ -496,27 +2111,54 @@
     </div>
 
     <div id="view-heatmap" class="tab-view">
-      <div class="section-header"><div class="section-title">Topic Heatmap</div></div>
+      <div class="section-header">
+        <div class="section-title">Topic Heatmap</div>
+      </div>
       <div class="glass" style="border-radius:16px">
         <div class="hm-body" id="hm-body">
-          <div class="empty-state"><div class="empty-icon">🗺</div><div class="empty-title">No data yet</div><div class="empty-sub">Classify questions first</div></div>
+          <div class="empty-state">
+            <div class="empty-icon">🗺</div>
+            <div class="empty-title">No data yet</div>
+            <div class="empty-sub">Classify questions first</div>
+          </div>
         </div>
       </div>
       <div style="margin-top:24px">
-        <div class="section-header"><div class="section-title">Pack Settings</div></div>
+        <div class="section-header">
+          <div class="section-title">Pack Settings</div>
+        </div>
         <div class="step-card glass" style="margin-top:0">
           <div class="step-body" style="display:block">
-            <div class="slider-row"><div class="slider-label">Min diff</div><input type="range" id="diff-min" min="1" max="5" value="1"><div class="slider-val" id="dmin-v">1</div></div>
-            <div class="slider-row"><div class="slider-label">Max diff</div><input type="range" id="diff-max" min="1" max="5" value="5"><div class="slider-val" id="dmax-v">5</div></div>
-            <div class="ios-toggle-row">
-              <div class="ios-toggle-info"><div class="name">Balance topics</div><div class="desc">Spread marks evenly across topic areas</div></div>
-              <label class="ios-toggle"><input type="checkbox" id="balance-toggle" checked><div class="ios-toggle-track"></div><div class="ios-toggle-thumb"></div></label>
+            <div class="slider-row">
+              <div class="slider-label">Min diff</div><input type="range" id="diff-min" min="1" max="5" value="1">
+              <div class="slider-val" id="dmin-v">1</div>
+            </div>
+            <div class="slider-row">
+              <div class="slider-label">Max diff</div><input type="range" id="diff-max" min="1" max="5" value="5">
+              <div class="slider-val" id="dmax-v">5</div>
             </div>
             <div class="ios-toggle-row">
-              <div class="ios-toggle-info"><div class="name">Spaced repetition <span class="sr-badge">SR</span></div><div class="desc">Prioritise questions you've scored badly on</div></div>
-              <label class="ios-toggle"><input type="checkbox" id="sr-toggle"><div class="ios-toggle-track"></div><div class="ios-toggle-thumb"></div></label>
+              <div class="ios-toggle-info">
+                <div class="name">Balance topics</div>
+                <div class="desc">Spread marks evenly across topic areas</div>
+              </div>
+              <label class="ios-toggle"><input type="checkbox" id="balance-toggle" checked>
+                <div class="ios-toggle-track"></div>
+                <div class="ios-toggle-thumb"></div>
+              </label>
             </div>
-            <div style="margin-top:14px"><button class="cta-btn primary" id="regen-inline-btn" onclick="regenPacks()" style="font-size:14px;padding:12px">↻ Regenerate Packs</button></div>
+            <div class="ios-toggle-row">
+              <div class="ios-toggle-info">
+                <div class="name">Spaced repetition <span class="sr-badge">SR</span></div>
+                <div class="desc">Prioritise questions you've scored badly on</div>
+              </div>
+              <label class="ios-toggle"><input type="checkbox" id="sr-toggle">
+                <div class="ios-toggle-track"></div>
+                <div class="ios-toggle-thumb"></div>
+              </label>
+            </div>
+            <div style="margin-top:14px"><button class="cta-btn primary" id="regen-inline-btn" onclick="regenPacks()"
+                style="font-size:14px;padding:12px">↻ Regenerate Packs</button></div>
           </div>
         </div>
       </div>
@@ -524,27 +2166,43 @@
 
     <!-- Custom Pack Builder tab -->
     <div id="view-builder" class="tab-view">
-      <div class="section-header"><div class="section-title">Custom Pack Builder</div></div>
-      <p class="builder-intro">Select specific topics and subtopics. PackGen will assemble a ~100 mark pack from your choices.</p>
+      <div class="section-header">
+        <div class="section-title">Custom Pack Builder</div>
+      </div>
+      <p class="builder-intro">Select specific topics and subtopics. PackGen will assemble a ~100 mark pack from your
+        choices.</p>
       <div id="builder-topic-groups"></div>
       <div class="builder-footer">
         <div class="builder-stats" id="builder-stats" style="display:none">
-          <div class="builder-stat"><div class="builder-stat-val" id="bs-sel">0</div><div class="builder-stat-label">Subtopics</div></div>
-          <div class="builder-stat"><div class="builder-stat-val" id="bs-q">0</div><div class="builder-stat-label">Available Qs</div></div>
-          <div class="builder-stat"><div class="builder-stat-val" id="bs-m">0</div><div class="builder-stat-label">Est. marks</div></div>
+          <div class="builder-stat">
+            <div class="builder-stat-val" id="bs-sel">0</div>
+            <div class="builder-stat-label">Subtopics</div>
+          </div>
+          <div class="builder-stat">
+            <div class="builder-stat-val" id="bs-q">0</div>
+            <div class="builder-stat-label">Available Qs</div>
+          </div>
+          <div class="builder-stat">
+            <div class="builder-stat-val" id="bs-m">0</div>
+            <div class="builder-stat-label">Est. marks</div>
+          </div>
         </div>
-        <button class="cta-btn primary" id="build-pack-btn" onclick="buildCustomPack()" style="display:none">Build Custom Pack</button>
+        <button class="cta-btn primary" id="build-pack-btn" onclick="buildCustomPack()" style="display:none">Build
+          Custom Pack</button>
       </div>
     </div>
 
     <div id="view-profile" class="tab-view">
-      <div class="section-header"><div class="section-title">Account</div></div>
+      <div class="section-header">
+        <div class="section-title">Account</div>
+      </div>
 
       <!-- Identity + usage -->
       <div class="step-card glass" style="margin-top:0">
         <div class="step-body" style="display:block">
           <div style="font-size:13px;color:var(--text-secondary);margin-bottom:2px">Signed in as</div>
-          <div style="font-size:15px;font-weight:600;color:var(--text-primary);margin-bottom:16px" id="profile-email">—</div>
+          <div style="font-size:15px;font-weight:600;color:var(--text-primary);margin-bottom:16px" id="profile-email">—
+          </div>
           <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
             <div>
               <div style="font-size:13px;color:var(--text-secondary);margin-bottom:2px">Plan</div>
@@ -558,10 +2216,13 @@
           </div>
           <div style="font-size:13px;color:var(--text-secondary);margin-bottom:4px">AI usage this month</div>
           <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px">
-            <div style="font-size:15px;font-weight:600;color:var(--text-primary)" id="profile-usage">0 / 500 questions</div>
+            <div style="font-size:15px;font-weight:600;color:var(--text-primary)" id="profile-usage">0 / 500 questions
+            </div>
             <div style="font-size:11px;color:var(--text-tertiary)" id="profile-usage-pct">0%</div>
           </div>
-          <div class="usage-bar-track"><div class="usage-bar-fill" id="usage-bar" style="width:0%"></div></div>
+          <div class="usage-bar-track">
+            <div class="usage-bar-fill" id="usage-bar" style="width:0%"></div>
+          </div>
         </div>
       </div>
 
@@ -569,18 +2230,30 @@
       <div style="margin-top:12px">
         <div class="step-card glass">
           <div class="step-body" style="display:block">
-            <div style="font-size:13px;font-weight:600;color:var(--text-primary);margin-bottom:4px">PackGen API Key</div>
+            <div style="font-size:13px;font-weight:600;color:var(--text-primary);margin-bottom:4px">PackGen API Key
+            </div>
             <div style="font-size:12px;color:var(--text-secondary);margin-bottom:10px;line-height:18px">
               This key authenticates your requests. Keep it private — it's tied to your rate limit and quota.
             </div>
-            <div style="display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:10px;background:rgba(0,0,0,0.04);border:1px solid rgba(0,0,0,0.08);margin-bottom:10px">
-              <span style="font-family:monospace;font-size:12px;color:var(--text-primary);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" id="profile-key-display">—</span>
-              <button onclick="copyPackgenKey(this)" style="background:none;border:none;cursor:pointer;font-size:13px;color:var(--text-secondary);padding:2px 6px;border-radius:6px;flex-shrink:0" title="Copy key">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            <div
+              style="display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:10px;background:rgba(0,0,0,0.04);border:1px solid rgba(0,0,0,0.08);margin-bottom:10px">
+              <span
+                style="font-family:monospace;font-size:12px;color:var(--text-primary);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"
+                id="profile-key-display">—</span>
+              <button onclick="copyPackgenKey(this)"
+                style="background:none;border:none;cursor:pointer;font-size:13px;color:var(--text-secondary);padding:2px 6px;border-radius:6px;flex-shrink:0"
+                title="Copy key">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                  stroke-linecap="round">
+                  <rect x="9" y="9" width="13" height="13" rx="2" />
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                </svg>
               </button>
             </div>
-            <button onclick="rotatePackgenKey(this)" class="cta-btn glass-btn" style="font-size:13px;padding:10px" id="rotate-key-btn">↻ Rotate Key</button>
-            <div style="font-size:11px;color:var(--text-tertiary);margin-top:6px;line-height:16px" id="rotate-key-note">Rotating invalidates your current key immediately.</div>
+            <button onclick="rotatePackgenKey(this)" class="cta-btn glass-btn" style="font-size:13px;padding:10px"
+              id="rotate-key-btn">↻ Rotate Key</button>
+            <div style="font-size:11px;color:var(--text-tertiary);margin-top:6px;line-height:16px" id="rotate-key-note">
+              Rotating invalidates your current key immediately.</div>
           </div>
         </div>
       </div>
@@ -589,9 +2262,15 @@
       <div style="margin-top:12px">
         <div class="step-card glass">
           <div class="step-body" style="display:block">
-            <div style="font-size:13px;font-weight:600;color:var(--text-primary);margin-bottom:4px">Your Anthropic Key <span style="font-weight:400;color:var(--text-secondary)">(optional)</span></div>
-            <div style="font-size:12px;color:var(--text-secondary);margin-bottom:10px;line-height:18px">Provide your own <code style="font-family:monospace;background:rgba(0,0,0,0.06);padding:1px 5px;border-radius:4px">sk-ant-...</code> key to bypass the monthly quota and use your own Anthropic credits.</div>
-            <input style="width:100%;padding:10px 12px;border-radius:10px;border:1px solid rgba(0,0,0,0.12);background:rgba(255,255,255,0.7);font-family:monospace;font-size:12px;outline:none" type="password" id="user-api-key" placeholder="sk-ant-api03-...">
+            <div style="font-size:13px;font-weight:600;color:var(--text-primary);margin-bottom:4px">Your Anthropic Key
+              <span style="font-weight:400;color:var(--text-secondary)">(optional)</span></div>
+            <div style="font-size:12px;color:var(--text-secondary);margin-bottom:10px;line-height:18px">Provide your own
+              <code
+                style="font-family:monospace;background:rgba(0,0,0,0.06);padding:1px 5px;border-radius:4px">sk-ant-...</code>
+              key to bypass the monthly quota and use your own Anthropic credits.</div>
+            <input
+              style="width:100%;padding:10px 12px;border-radius:10px;border:1px solid rgba(0,0,0,0.12);background:rgba(255,255,255,0.7);font-family:monospace;font-size:12px;outline:none"
+              type="password" id="user-api-key" placeholder="sk-ant-api03-...">
           </div>
         </div>
       </div>
@@ -612,8 +2291,10 @@
               </div>
             </div>
             <div style="display:flex;flex-direction:column;gap:8px">
-              <button class="cta-btn glass-btn" onclick="saveSession()" style="font-size:14px;padding:12px">💾 Save Session</button>
-              <button class="cta-btn glass-btn" onclick="newSession()" style="font-size:14px;padding:12px">↩ New Session</button>
+              <button class="cta-btn glass-btn" onclick="saveSession()" style="font-size:14px;padding:12px">💾 Save
+                Session</button>
+              <button class="cta-btn glass-btn" onclick="newSession()" style="font-size:14px;padding:12px">↩ New
+                Session</button>
             </div>
           </div>
         </div>
@@ -623,51 +2304,82 @@
 
     <!-- Progress tab -->
     <div id="view-progress" class="tab-view">
-      <div class="section-header"><div class="section-title">Topic Progress</div></div>
+      <div class="section-header">
+        <div class="section-title">Topic Progress</div>
+      </div>
       <div class="step-card glass" style="margin-top:0">
         <div class="step-body" style="display:block" id="progress-topics-list">
-          <div class="empty-state"><div class="empty-icon">📊</div><div class="empty-title">No scores yet</div><div class="empty-sub">Complete a pack and enter your marks to see progress</div></div>
+          <div class="empty-state">
+            <div class="empty-icon">📊</div>
+            <div class="empty-title">No scores yet</div>
+            <div class="empty-sub">Complete a pack and enter your marks to see progress</div>
+          </div>
         </div>
       </div>
-      <div class="section-header" style="margin-top:20px"><div class="section-title">By Paper</div></div>
+      <div class="section-header" style="margin-top:20px">
+        <div class="section-title">By Paper</div>
+      </div>
       <div class="step-card glass" style="margin-top:0">
         <div class="step-body" style="display:block" id="paper-stats-list">
-          <div class="empty-state" style="padding:16px 0"><div class="empty-title" style="font-size:14px">No paper data yet</div></div>
+          <div class="empty-state" style="padding:16px 0">
+            <div class="empty-title" style="font-size:14px">No paper data yet</div>
+          </div>
         </div>
       </div>
     </div>
 
     <!-- History tab -->
     <div id="view-history" class="tab-view">
-      <div class="section-header"><div class="section-title">Attempt History</div></div>
+      <div class="section-header">
+        <div class="section-title">Attempt History</div>
+      </div>
       <div id="history-list">
-        <div class="empty-state"><div class="empty-icon">🕐</div><div class="empty-title">No attempts yet</div><div class="empty-sub">Download a pack, do it, then enter your marks</div></div>
+        <div class="empty-state">
+          <div class="empty-icon">🕐</div>
+          <div class="empty-title">No attempts yet</div>
+          <div class="empty-sub">Download a pack, do it, then enter your marks</div>
+        </div>
       </div>
     </div>
 
   </div>
 
   <!-- Nav + Tab bar -->
-  <div id="nav-bar" class="glass"><div class="nav-title" id="nav-title">Your Packs</div></div>
+  <div id="nav-bar" class="glass">
+    <div class="nav-title" id="nav-title">Your Packs</div>
+  </div>
   <div id="tab-bar" class="glass hidden">
     <div class="tab-item active" onclick="switchTab('packs',this)" id="tab-packs">
-      <div class="tab-icon"><svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg></div>
+      <div class="tab-icon"><svg viewBox="0 0 24 24">
+          <rect x="2" y="3" width="20" height="14" rx="2" />
+          <path d="M8 21h8M12 17v4" />
+        </svg></div>
       <span class="tab-label">Packs</span>
     </div>
     <div class="tab-item" onclick="switchTab('builder',this)" id="tab-builder">
-      <div class="tab-icon"><svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg></div>
+      <div class="tab-icon"><svg viewBox="0 0 24 24">
+          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+        </svg></div>
       <span class="tab-label">Custom</span>
     </div>
     <div class="tab-item" onclick="switchTab('progress',this)" id="tab-progress">
-      <div class="tab-icon"><svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div>
+      <div class="tab-icon"><svg viewBox="0 0 24 24">
+          <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+        </svg></div>
       <span class="tab-label">Progress</span>
     </div>
     <div class="tab-item" onclick="switchTab('history',this)" id="tab-history">
-      <div class="tab-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+      <div class="tab-icon"><svg viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="10" />
+          <polyline points="12 6 12 12 16 14" />
+        </svg></div>
       <span class="tab-label">History</span>
     </div>
     <div class="tab-item" onclick="switchTab('profile',this)" id="tab-profile">
-      <div class="tab-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg></div>
+      <div class="tab-icon"><svg viewBox="0 0 24 24">
+          <circle cx="12" cy="8" r="4" />
+          <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
+        </svg></div>
       <span class="tab-label">Account</span>
     </div>
   </div>
@@ -678,21 +2390,23 @@
 
   <script>
     // ── Constants ─────────────────────────────────────────────────────────────
-    const TOPIC_COLORS = { Number:"#48484A", Algebra:"#3A3A3C", Geometry:"#636366", Statistics:"#8E8E93", Probability:"#2C2C2E", Calculus:"#6C6C70", Unknown:"#AEAEB2" };
-    const DIFF_LABELS  = { 1:"Easy", 2:"Low", 3:"Medium", 4:"Hard", 5:"Very Hard" };
+    const TOPIC_COLORS = { Number: "#48484A", Algebra: "#3A3A3C", Geometry: "#636366", Statistics: "#8E8E93", Probability: "#2C2C2E", Calculus: "#6C6C70", Unknown: "#AEAEB2" };
+    const DIFF_LABELS = { 1: "Easy", 2: "Low", 3: "Medium", 4: "Hard", 5: "Very Hard" };
 
     // ── State ─────────────────────────────────────────────────────────────────
     let jobId = null, selectedFiles = [], specFile = null;
     let poolData = [], packData = [], allTopics = {};
     let activeTopicFilter = "all";
     let authToken = localStorage.getItem("pg_token") || "";
-    let pgKey     = localStorage.getItem("pg_key")   || "";   // PackGen API key
-    let authUser  = null;
-    let authMode  = "signin";   // or "signup"
-    let selectedSubtopics = {};  // {topic: Set<subtopic>}
+    let pgKey = localStorage.getItem("pg_key") || "";
+    let authUser = null;
+    let authMode = "signin";
+    let selectedSubtopics = {};
     let previewCache = {};
     let previewTimer = null;
     let authEnabled = false;
+    let supabaseUrl = "";   // cached from /api/config
+    let supabaseAnon = "";   // cached from /api/config
 
     // ── apiFetch — attaches X-PackGen-Key to every request ───────────────────
     function apiFetch(url, options = {}) {
@@ -705,19 +2419,21 @@
     async function init() {
       const cfg = await (await fetch("/api/config")).json();
       authEnabled = cfg.auth_enabled;
+      supabaseUrl = (cfg.supabase_url || "").replace(/\/$/, "");  // strip trailing slash
+      supabaseAnon = cfg.supabase_anon || "";
 
       // Restore session if token still valid
       if (authToken && authEnabled) {
         try {
-          const r = await fetch(`${cfg.supabase_url}/auth/v1/user`, {
-            headers: { "apikey": cfg.supabase_anon, "Authorization": `Bearer ${authToken}` }
+          const r = await fetch(`${supabaseUrl}/auth/v1/user`, {
+            headers: { "apikey": supabaseAnon, "Authorization": `Bearer ${authToken}` }
           });
           if (r.ok) authUser = await r.json();
           else { authToken = ""; localStorage.removeItem("pg_token"); }
-        } catch(e) {}
+        } catch (e) { }
       }
 
-      const r = await apiFetch("/api/job/new", { method:"POST" });
+      const r = await apiFetch("/api/job/new", { method: "POST" });
       jobId = (await r.json()).job_id;
       const t = await fetch("/api/topics");
       allTopics = (await t.json()).topics;
@@ -746,40 +2462,39 @@
 
     async function submitAuth() {
       const email = document.getElementById("auth-email").value.trim();
-      const pw    = document.getElementById("auth-password").value;
-      const pw2   = document.getElementById("auth-password2").value;
+      const pw = document.getElementById("auth-password").value;
+      const pw2 = document.getElementById("auth-password2").value;
       const errEl = document.getElementById("auth-error");
-      const btn   = document.getElementById("auth-submit-btn");
-      const cfg   = await (await fetch("/api/config")).json();
-      const SUPABASE_URL  = cfg.supabase_url;
-      const SUPABASE_ANON = cfg.supabase_anon;
+      const btn = document.getElementById("auth-submit-btn");
 
       errEl.textContent = "";
       if (!email || !pw) { errEl.textContent = "Please enter email and password."; return; }
       if (authMode === "signup" && pw !== pw2) { errEl.textContent = "Passwords don't match."; return; }
+      if (!supabaseUrl || !supabaseAnon) {
+        errEl.textContent = "Auth not configured — check Supabase env vars."; return;
+      }
 
       btn.textContent = authMode === "signin" ? "Signing in…" : "Creating account…";
       btn.disabled = true;
 
       const endpoint = authMode === "signin"
-        ? `${SUPABASE_URL}/auth/v1/token?grant_type=password`
-        : `${SUPABASE_URL}/auth/v1/signup`;
+        ? `${supabaseUrl}/auth/v1/token?grant_type=password`
+        : `${supabaseUrl}/auth/v1/signup`;
 
       try {
         const r = await fetch(endpoint, {
           method: "POST",
-          headers: { "apikey": SUPABASE_ANON, "Content-Type": "application/json" },
+          headers: { "apikey": supabaseAnon, "Content-Type": "application/json" },
           body: JSON.stringify({ email, password: pw }),
         });
         const d = await r.json();
 
         if (d.access_token) {
           authToken = d.access_token;
-          authUser  = d.user;
+          authUser = d.user;
           localStorage.setItem("pg_token", authToken);
 
           if (authMode === "signup") {
-            // New user — provision a PackGen key and store it
             btn.textContent = "Generating your API key…";
             try {
               const kr = await fetch("/api/user/provision-key", {
@@ -791,21 +2506,24 @@
                 pgKey = kd.packgen_key;
                 localStorage.setItem("pg_key", pgKey);
               }
-            } catch(e) {
+            } catch (e) {
               console.warn("Could not provision PackGen key:", e);
             }
           } else {
-            // Returning user — key already in localStorage from signup
             pgKey = localStorage.getItem("pg_key") || "";
           }
 
           showScreen("screen-upload");
           setProgress(0.15);
         } else {
-          errEl.textContent = d.error_description || d.msg || "Authentication failed.";
+          // Surface a useful error message
+          const msg = d.error_description || d.msg || d.message || d.error || "Authentication failed.";
+          errEl.textContent = msg;
+          console.error("Auth error response:", d);
         }
       } catch (e) {
-        errEl.textContent = "Network error. Please try again.";
+        errEl.textContent = "Network error — check your connection.";
+        console.error("Auth network error:", e);
       }
 
       btn.textContent = authMode === "signin" ? "Sign In" : "Create Account";
@@ -814,11 +2532,16 @@
 
     // ── Onboarding navigation ─────────────────────────────────────────────────
     function showScreen(id) {
-      ["screen-welcome","screen-auth","screen-upload","screen-pipeline"].forEach(s => {
+      ["screen-welcome", "screen-auth", "screen-upload", "screen-pipeline"].forEach(s => {
         const el = document.getElementById(s);
         if (el) el.style.display = "none";
       });
-      document.getElementById(id).style.display = "";
+      const target = document.getElementById(id);
+      if (!target) return;
+      // screen-welcome and screen-auth are flex columns (centred)
+      // screen-upload and screen-pipeline are block (stacked content)
+      const flexScreens = ["screen-welcome", "screen-auth"];
+      target.style.display = flexScreens.includes(id) ? "flex" : "block";
     }
 
     function setProgress(pct) {
@@ -848,72 +2571,86 @@
     async function startPipeline() {
       const btn = document.getElementById("btn-start");
       btn.disabled = true; btn.textContent = "Processing…";
-      showScreen("screen-pipeline");
-      setProgress(0.25);
-      document.getElementById("pipeline-headline").textContent = "Setting up…";
-      document.getElementById("pipeline-sub").textContent = "Scanning your papers";
+      try {
+        showScreen("screen-pipeline");
+        setProgress(0.25);
+        document.getElementById("pipeline-headline").textContent = "Setting up…";
+        document.getElementById("pipeline-sub").textContent = "Scanning your papers";
 
-      activateStep("scan");
-      const CHUNK = 20;
-      for (let i = 0; i < selectedFiles.length; i += CHUNK) {
-        const fd = new FormData();
-        selectedFiles.slice(i, i + CHUNK).forEach(f => fd.append("files", f));
-        if (i === 0 && specFile) fd.append("spec", specFile);
-        await apiFetch(`/api/upload/${jobId}`, { method:"POST", body:fd });
-        setBar("scan", Math.min((i + CHUNK) / selectedFiles.length, 1) * 100);
-        setMsg("scan", `Uploaded ${Math.min(i + CHUNK, selectedFiles.length)} of ${selectedFiles.length} files…`);
+        activateStep("scan");
+        const CHUNK = 20;
+        for (let i = 0; i < selectedFiles.length; i += CHUNK) {
+          const fd = new FormData();
+          selectedFiles.slice(i, i + CHUNK).forEach(f => fd.append("files", f));
+          if (i === 0 && specFile) fd.append("spec", specFile);
+          await apiFetch(`/api/upload/${jobId}`, { method: "POST", body: fd });
+          setBar("scan", Math.min((i + CHUNK) / selectedFiles.length, 1) * 100);
+          setMsg("scan", `Uploaded ${Math.min(i + CHUNK, selectedFiles.length)} of ${selectedFiles.length} files…`);
+        }
+
+        const fd2 = new FormData();
+        const r = await apiFetch(`/api/upload/${jobId}`, { method: "POST", body: fd2 });
+        const d = await r.json();
+        const pairs = d.pair_names || [];
+        const uploadWarnings = d.warnings || [];
+        setProgress(0.35); setBar("scan", 100);
+        setMsg("scan", `${pairs.length} pairs detected`);
+        renderStepWarnings("scan", uploadWarnings);
+
+        const chips = document.getElementById("pairs-chips");
+        const show = pairs.slice(0, 8);
+        chips.innerHTML = show.map(n => `<div class="pair-chip">${n}</div>`).join("") + (pairs.length > 8 ? `<div class="pairs-more">+${pairs.length - 8} more</div>` : "");
+        doneStep("scan"); setProgress(0.45);
+
+        activateStep("extract");
+        document.getElementById("pipeline-headline").textContent = "Extracting…";
+        document.getElementById("pipeline-sub").textContent = "Pulling questions from every paper";
+        await apiFetch(`/api/extract/${jobId}`, { method: "POST" });
+        const extractResult = await pollStep("extracting", "extract", "bar-extract", "msg-extract", 0.45, 0.65);
+        ensureStepSucceeded(extractResult, "Extraction failed");
+        renderStepWarnings("extract", extractResult.warnings || []);
+
+        const pr = await (await apiFetch(`/api/pool/${jobId}`)).json();
+        poolData = pr.pool || [];
+        document.getElementById("sm-q").textContent = pr.total_questions;
+        document.getElementById("sm-m").textContent = pr.total_marks;
+        document.getElementById("sm-p").textContent = "~" + Math.round(pr.total_marks / 100);
+        document.getElementById("stats-mini").style.display = "grid";
+        doneStep("extract"); setProgress(0.65);
+
+        activateStep("classify");
+        document.getElementById("pipeline-headline").textContent = "Classifying…";
+        document.getElementById("pipeline-sub").textContent = "AI is reading every question";
+        const userKey = document.getElementById("user-api-key")?.value || "";
+        await apiFetch(`/api/classify/${jobId}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ api_key: userKey }) });
+        const classifyResult = await pollStep("classifying", "classify", "bar-classify", "msg-classify", 0.65, 0.85);
+        ensureStepSucceeded(classifyResult, "Classification failed");
+
+        const pr2 = await (await apiFetch(`/api/pool/${jobId}`)).json();
+        poolData = pr2.pool || [];
+        doneStep("classify"); setProgress(0.85);
+
+        activateStep("generate");
+        document.getElementById("pipeline-headline").textContent = "Building packs…";
+        document.getElementById("pipeline-sub").textContent = "Assembling ~100-mark practice papers";
+        await apiFetch(`/api/generate/${jobId}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ balance_topics: true, diff_filter: [1, 5] }) });
+        const generateResult = await pollStep("generating", "generate", "bar-generate", "msg-generate", 0.85, 1.0);
+        ensureStepSucceeded(generateResult, "Pack generation failed");
+
+        const s = await (await apiFetch(`/api/status/${jobId}`)).json();
+        packData = s.pack_files || [];
+        if (!packData.length) {
+          throw new Error("Pack generation completed with no output files.");
+        }
+        doneStep("generate"); setProgress(1.0);
+        setTimeout(() => revealApp(), 600);
+      } catch (err) {
+        alert(err?.message || "Pipeline failed. Check warnings and try again.");
+        showScreen("screen-upload");
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Begin";
       }
-
-      const fd2 = new FormData();
-      const r = await apiFetch(`/api/upload/${jobId}`, { method:"POST", body:fd2 });
-      const d = await r.json();
-      const pairs = d.pair_names || [];
-      const uploadWarnings = d.warnings || [];
-      setProgress(0.35); setBar("scan", 100);
-      setMsg("scan", `${pairs.length} pairs detected`);
-      renderStepWarnings("scan", uploadWarnings);
-
-      const chips = document.getElementById("pairs-chips");
-      const show = pairs.slice(0, 8);
-      chips.innerHTML = show.map(n => `<div class="pair-chip">${n}</div>`).join("") + (pairs.length > 8 ? `<div class="pairs-more">+${pairs.length-8} more</div>` : "");
-      doneStep("scan"); setProgress(0.45);
-
-      activateStep("extract");
-      document.getElementById("pipeline-headline").textContent = "Extracting…";
-      document.getElementById("pipeline-sub").textContent = "Pulling questions from every paper";
-      await apiFetch(`/api/extract/${jobId}`, { method:"POST" });
-      const extractResult = await pollStep("extracting", "extract", "bar-extract", "msg-extract", 0.45, 0.65);
-      renderStepWarnings("extract", extractResult.warnings || []);
-
-      const pr = await (await apiFetch(`/api/pool/${jobId}`)).json();
-      poolData = pr.pool || [];
-      document.getElementById("sm-q").textContent = pr.total_questions;
-      document.getElementById("sm-m").textContent = pr.total_marks;
-      document.getElementById("sm-p").textContent = "~" + Math.round(pr.total_marks / 100);
-      document.getElementById("stats-mini").style.display = "grid";
-      doneStep("extract"); setProgress(0.65);
-
-      activateStep("classify");
-      document.getElementById("pipeline-headline").textContent = "Classifying…";
-      document.getElementById("pipeline-sub").textContent = "AI is reading every question";
-      const userKey = document.getElementById("user-api-key")?.value || "";
-      await apiFetch(`/api/classify/${jobId}`, { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ api_key: userKey }) });
-      await pollStep("classifying", "classify", "bar-classify", "msg-classify", 0.65, 0.85);
-
-      const pr2 = await (await apiFetch(`/api/pool/${jobId}`)).json();
-      poolData = pr2.pool || [];
-      doneStep("classify"); setProgress(0.85);
-
-      activateStep("generate");
-      document.getElementById("pipeline-headline").textContent = "Building packs…";
-      document.getElementById("pipeline-sub").textContent = "Assembling ~100-mark practice papers";
-      await apiFetch(`/api/generate/${jobId}`, { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ balance_topics:true, diff_filter:[1,5] }) });
-      await pollStep("generating", "generate", "bar-generate", "msg-generate", 0.85, 1.0);
-
-      const s = await (await apiFetch(`/api/status/${jobId}`)).json();
-      packData = s.pack_files || [];
-      doneStep("generate"); setProgress(1.0);
-      setTimeout(() => revealApp(), 600);
     }
 
     function renderStepWarnings(stepId, warnings) {
@@ -923,15 +2660,15 @@
       const container = document.getElementById(`step-warnings-${stepId}`);
       if (!container) return;
       const html = `<div class="step-warnings" onclick="this.classList.toggle('open')">
-        <div class="step-warnings-header">⚠ ${warnings.length} warning${warnings.length>1?"s":""} — tap to expand</div>
-        <div class="step-warnings-list">${warnings.map(w=>`<div class="step-warning-item">· ${w}</div>`).join("")}</div>
+        <div class="step-warnings-header">⚠ ${warnings.length} warning${warnings.length > 1 ? "s" : ""} — tap to expand</div>
+        <div class="step-warnings-list">${warnings.map(w => `<div class="step-warning-item">· ${w}</div>`).join("")}</div>
       </div>`;
       container.innerHTML = html;
     }
 
     async function pollStep(watchStatus, stepId, barId, msgId, fromPct, toPct) {
       return new Promise(resolve => {
-        const DONE = ["extracted","classified","done","error"];
+        const DONE = ["extracted", "classified", "done", "error"];
         const timer = setInterval(async () => {
           const d = await (await apiFetch(`/api/status/${jobId}`)).json();
           const pct = d.progress || 0;
@@ -942,18 +2679,24 @@
       });
     }
 
+    function ensureStepSucceeded(result, fallbackMessage) {
+      if (!result || result.status !== "error") return;
+      const msg = result.message || fallbackMessage || "Operation failed";
+      throw new Error(msg);
+    }
+
     function activateStep(id) {
-      const card = document.getElementById("step-"+id);
-      const num  = document.getElementById("sn-"+id);
+      const card = document.getElementById("step-" + id);
+      const num = document.getElementById("sn-" + id);
       card.classList.add("active");
       num.classList.add("active");
     }
     function doneStep(id) {
-      const num = document.getElementById("sn-"+id);
+      const num = document.getElementById("sn-" + id);
       num.classList.remove("active"); num.classList.add("done"); num.textContent = "";
     }
-    function setBar(id, pct) { const el = document.getElementById("bar-"+id); if(el) el.style.width = pct+"%" }
-    function setMsg(id, msg) { const el = document.getElementById("msg-"+id); if(el) el.textContent = msg }
+    function setBar(id, pct) { const el = document.getElementById("bar-" + id); if (el) el.style.width = pct + "%" }
+    function setMsg(id, msg) { const el = document.getElementById("msg-" + id); if (el) el.textContent = msg }
 
     // ── Reveal app ────────────────────────────────────────────────────────────
     function revealApp() {
@@ -973,9 +2716,9 @@
       pv.classList.add("visible");
 
       // ── Populate account tab ──────────────────────────────────────────────
-      const total = poolData.reduce((a,q) => a+q.marks, 0);
+      const total = poolData.reduce((a, q) => a + q.marks, 0);
       document.getElementById("profile-q-count").textContent = poolData.length;
-      document.getElementById("profile-marks").textContent   = total;
+      document.getElementById("profile-marks").textContent = total;
 
       if (authUser) {
         document.getElementById("profile-email").textContent = authUser.email || "—";
@@ -1015,18 +2758,18 @@
         const r = await apiFetch("/api/user/profile");
         if (!r.ok) return;
         const d = await r.json();
-        const plan    = (d.plan || "free");
-        const used    = d.usage_this_month || 0;
-        const quota   = d.quota || 500;
-        const rate    = d.rate_limit_per_hour || 200;
-        const pct     = Math.min(Math.round(used / quota * 100), 100);
+        const plan = (d.plan || "free");
+        const used = d.usage_this_month || 0;
+        const quota = d.quota || 500;
+        const rate = d.rate_limit_per_hour || 200;
+        const pct = Math.min(Math.round(used / quota * 100), 100);
 
-        document.getElementById("profile-plan").textContent    = plan.charAt(0).toUpperCase() + plan.slice(1);
-        document.getElementById("profile-rate").textContent    = rate.toLocaleString() + " / hr";
-        document.getElementById("profile-usage").textContent   = `${used.toLocaleString()} / ${quota.toLocaleString()} questions`;
+        document.getElementById("profile-plan").textContent = plan.charAt(0).toUpperCase() + plan.slice(1);
+        document.getElementById("profile-rate").textContent = rate.toLocaleString() + " / hr";
+        document.getElementById("profile-usage").textContent = `${used.toLocaleString()} / ${quota.toLocaleString()} questions`;
         document.getElementById("profile-usage-pct").textContent = pct + "%";
-        document.getElementById("usage-bar").style.width       = pct + "%";
-      } catch(e) {}
+        document.getElementById("usage-bar").style.width = pct + "%";
+      } catch (e) { }
     }
 
     function handleScroll() {
@@ -1038,11 +2781,11 @@
     // ── Filter chips ──────────────────────────────────────────────────────────
     function buildFilterChips() {
       const fb = document.getElementById("filter-bar");
-      const topics = [...new Set(poolData.map(q => q.topic||"Unknown").filter(Boolean))];
+      const topics = [...new Set(poolData.map(q => q.topic || "Unknown").filter(Boolean))];
       topics.forEach(t => {
         const chip = document.createElement("div");
         chip.className = "filter-chip"; chip.dataset.topic = t;
-        chip.textContent = t; chip.onclick = function(){ filterTopic(this) };
+        chip.textContent = t; chip.onclick = function () { filterTopic(this) };
         fb.appendChild(chip);
       });
     }
@@ -1060,18 +2803,18 @@
       if (activeTopicFilter !== "all") {
         filtered = packs.filter(p => p.questions.some(q => q.topic === activeTopicFilter));
       }
-      const totalMarks = packs.reduce((a,p) => a+p.total_marks, 0);
+      const totalMarks = packs.reduce((a, p) => a + p.total_marks, 0);
       document.getElementById("packs-large-sub").textContent = `${packs.length} packs · ${totalMarks} marks`;
 
       grid.innerHTML = filtered.map((pack, pi) => {
-        const topicEntries = Object.entries(pack.topics||{}).sort((a,b)=>b[1]-a[1]).slice(0,5);
-        const maxC = Math.max(...topicEntries.map(e=>e[1]), 1);
-        const bars = topicEntries.map(([t,c]) => {
-          const color = TOPIC_COLORS[t]||TOPIC_COLORS.Unknown;
+        const topicEntries = Object.entries(pack.topics || {}).sort((a, b) => b[1] - a[1]).slice(0, 5);
+        const maxC = Math.max(...topicEntries.map(e => e[1]), 1);
+        const bars = topicEntries.map(([t, c]) => {
+          const color = TOPIC_COLORS[t] || TOPIC_COLORS.Unknown;
           return `<div class="topic-bar-row">
             <div class="topic-dot" style="background:${color}"></div>
             <div class="topic-name">${t}</div>
-            <div class="topic-track"><div class="topic-fill" style="width:${c/maxC*100}%;background:${color}"></div></div>
+            <div class="topic-track"><div class="topic-fill" style="width:${c / maxC * 100}%;background:${color}"></div></div>
             <div class="topic-count">${c}</div>
           </div>`;
         }).join("");
@@ -1083,30 +2826,30 @@
           : "";
 
         // Score entry rows
-        const scoreRows = (pack.questions||[]).map((q,qi) => `
+        const scoreRows = (pack.questions || []).map((q, qi) => `
           <div class="score-row">
-            <div class="score-row-label">Q${qi+1} ${q.subtopic||q.topic||""}</div>
+            <div class="score-row-label">Q${qi + 1} ${q.subtopic || q.topic || ""}</div>
             <input class="score-input" type="number" min="0" max="${q.marks}"
               value="" placeholder="0" data-q-key="${q.key}" data-q-num="${q.q}" data-max="${q.marks}">
             <div class="score-max">/ ${q.marks}</div>
           </div>`).join("");
 
-        const qRows = (pack.questions||[]).map((q, qi) => {
-          const color = TOPIC_COLORS[q.topic]||TOPIC_COLORS.Unknown;
-          const d = q.difficulty||0;
-          const pips = Array.from({length:5},(_,i)=>`<span class="${i<d?"on":""}"></span>`).join("");
-          return `<div class="q-row" data-jid="${jobId}" data-pool-idx="${poolData.findIndex(pq=>pq.key===q.key&&pq.q===q.q)}"
+        const qRows = (pack.questions || []).map((q, qi) => {
+          const color = TOPIC_COLORS[q.topic] || TOPIC_COLORS.Unknown;
+          const d = q.difficulty || 0;
+          const pips = Array.from({ length: 5 }, (_, i) => `<span class="${i < d ? "on" : ""}"></span>`).join("");
+          return `<div class="q-row" data-jid="${jobId}" data-pool-idx="${poolData.findIndex(pq => pq.key === q.key && pq.q === q.q)}"
             onmouseenter="showQPreview(this,event)" onmouseleave="hideQPreview()">
             <div class="q-source">${q.key}</div>
             <div class="q-num">Q${q.q}</div>
             <div class="q-marks">${q.marks}m</div>
-            <div class="q-topic" style="background:${color}20;color:${color}">${q.topic||"—"}</div>
-            <div class="q-sub">${q.subtopic||"—"}</div>
+            <div class="q-topic" style="background:${color}20;color:${color}">${q.topic || "—"}</div>
+            <div class="q-sub">${q.subtopic || "—"}</div>
             <div class="diff-pip">${pips}</div>
           </div>`;
         }).join("");
 
-        return `<div class="pack-card glass stagger-item" style="animation-delay:${pi*40}ms">
+        return `<div class="pack-card glass stagger-item" style="animation-delay:${pi * 40}ms">
           <div class="pack-card-top">
             <div class="pack-card-num">Pack ${pack.pack_num}${isCustom}${attemptedBadge}</div>
             <div class="pack-card-marks">${pack.total_marks}<span> marks</span></div>
@@ -1146,13 +2889,13 @@
       }).join("");
 
       // Global warnings
-      apiFetch(`/api/status/${jobId}`).then(r=>r.json()).then(s => {
+      apiFetch(`/api/status/${jobId}`).then(r => r.json()).then(s => {
         const warns = s.warnings || [];
         if (warns.length) {
-          document.getElementById("warnings-list").innerHTML = warns.map(w=>`<div class="warning-item">· ${w}</div>`).join("");
+          document.getElementById("warnings-list").innerHTML = warns.map(w => `<div class="warning-item">· ${w}</div>`).join("");
           document.getElementById("warnings-card").style.display = "block";
         }
-      }).catch(()=>{});
+      }).catch(() => { });
     }
 
     function toggleExpand(btn) {
@@ -1185,7 +2928,7 @@
             previewCache[idx] = d.image;
             showPreviewImage(pop, d.image, evt);
           }
-        } catch(e) { pop.style.display = "none" }
+        } catch (e) { pop.style.display = "none" }
       }, 320);
     }
 
@@ -1199,12 +2942,12 @@
     function positionPopover(pop, evt) {
       const x = evt.clientX, y = evt.clientY;
       const pw = 310, ph = 240;
-      let left = x + 16, top = y - ph/2;
+      let left = x + 16, top = y - ph / 2;
       if (left + pw > window.innerWidth - 10) left = x - pw - 16;
       if (top < 10) top = 10;
       if (top + ph > window.innerHeight - 10) top = window.innerHeight - ph - 10;
       pop.style.left = left + "px";
-      pop.style.top  = top  + "px";
+      pop.style.top = top + "px";
     }
 
     function hideQPreview() {
@@ -1255,7 +2998,7 @@
             <circle cx="18" cy="18" r="3" fill="rgba(175,82,222,0.4)" stroke="none"/>
             <path d="M18 16v4M16 18h4" stroke="rgba(175,82,222,0.9)" stroke-width="1.5"/>`;
         }, 2500);
-      } catch(e) {
+      } catch (e) {
         tip.textContent = "Copy failed — try again";
         tip.style.opacity = "1";
         setTimeout(() => { tip.style.opacity = ""; tip.textContent = "Copy context for AI" }, 2500);
@@ -1267,14 +3010,16 @@
       document.querySelectorAll(".tab-item").forEach(t => t.classList.remove("active"));
       tabEl.classList.add("active");
       document.querySelectorAll(".tab-view").forEach(v => v.classList.remove("active"));
-      document.getElementById("view-"+view).classList.add("active");
-      const titles = { packs:"Your Packs", builder:"Custom Pack", heatmap:"Analysis",
-                       progress:"Progress", history:"History", profile:"Account" };
+      document.getElementById("view-" + view).classList.add("active");
+      const titles = {
+        packs: "Your Packs", builder: "Custom Pack", heatmap: "Analysis",
+        progress: "Progress", history: "History", profile: "Account"
+      };
       document.getElementById("nav-title").textContent = titles[view] || "";
-      if (view === "heatmap")  loadHeatmap();
+      if (view === "heatmap") loadHeatmap();
       if (view === "progress") loadProgress();
-      if (view === "history")  loadHistory();
-      if (view === "profile")  { updateKeyDisplay(); loadProfileUsage(); }
+      if (view === "history") loadHistory();
+      if (view === "profile") { updateKeyDisplay(); loadProfileUsage(); }
     }
 
     // ── Heatmap ───────────────────────────────────────────────────────────────
@@ -1283,18 +3028,18 @@
       const d = await (await apiFetch(`/api/heatmap/${jobId}`)).json();
       const hm = d.heatmap || {};
       if (!Object.keys(hm).length) return;
-      const diffs = [1,2,3,4,5];
-      const dLabels = { 1:"Easy", 2:"Low", 3:"Med", 4:"Hard", 5:"V.H" };
-      let html = `<div class="hm-row" style="padding-bottom:4px"><div class="hm-label"></div>${diffs.map(d=>`<div class="hm-d-label">${dLabels[d]}</div>`).join("")}</div>`;
+      const diffs = [1, 2, 3, 4, 5];
+      const dLabels = { 1: "Easy", 2: "Low", 3: "Med", 4: "Hard", 5: "V.H" };
+      let html = `<div class="hm-row" style="padding-bottom:4px"><div class="hm-label"></div>${diffs.map(d => `<div class="hm-d-label">${dLabels[d]}</div>`).join("")}</div>`;
       for (const [topic, counts] of Object.entries(hm)) {
-        const color = TOPIC_COLORS[topic]||TOPIC_COLORS.Unknown;
+        const color = TOPIC_COLORS[topic] || TOPIC_COLORS.Unknown;
         html += `<div class="hm-row">
           <div class="hm-label" style="color:${color}">${topic}</div>
-          ${diffs.map(d=>{
-            const c = counts[d]||0;
-            const op = c ? Math.min(0.15+c/8,1) : 0.06;
-            return `<div class="hm-cell" style="background:${color};opacity:${op}">${c||""}</div>`;
-          }).join("")}
+          ${diffs.map(d => {
+          const c = counts[d] || 0;
+          const op = c ? Math.min(0.15 + c / 8, 1) : 0.06;
+          return `<div class="hm-cell" style="background:${color};opacity:${op}">${c || ""}</div>`;
+        }).join("")}
         </div>`;
       }
       document.getElementById("hm-body").innerHTML = html;
@@ -1305,24 +3050,33 @@
       const diffMin = +document.getElementById("diff-min").value;
       const diffMax = +document.getElementById("diff-max").value;
       const balance = document.getElementById("balance-toggle").checked;
-      const sr      = document.getElementById("sr-toggle")?.checked || false;
+      const sr = document.getElementById("sr-toggle")?.checked || false;
       const btns = [document.getElementById("regen-btn"), document.getElementById("regen-inline-btn")];
-      btns.forEach(b => { if(b) { b.textContent = "↻ Generating…"; b.disabled = true } });
-      await apiFetch(`/api/generate/${jobId}`, {
-        method:"POST", headers:{"Content-Type":"application/json"},
-        body: JSON.stringify({ balance_topics:balance, diff_filter:[diffMin,diffMax], spaced_repetition:sr })
-      });
-      const wait = () => new Promise(res => {
-        const t = setInterval(async () => {
-          const d = await (await apiFetch(`/api/status/${jobId}`)).json();
-          if (["done","error"].includes(d.status)) { clearInterval(t); res(d) }
-        }, 700);
-      });
-      const s = await wait();
-      packData = s.pack_files || [];
-      renderPacks(packData);
-      btns.forEach(b => { if(b) { b.textContent = "↻ Regenerate"; b.disabled = false } });
-      switchTab("packs", document.getElementById("tab-packs"));
+      btns.forEach(b => { if (b) { b.textContent = "↻ Generating…"; b.disabled = true } });
+      try {
+        await apiFetch(`/api/generate/${jobId}`, {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ balance_topics: balance, diff_filter: [diffMin, diffMax], spaced_repetition: sr })
+        });
+        const wait = () => new Promise(res => {
+          const t = setInterval(async () => {
+            const d = await (await apiFetch(`/api/status/${jobId}`)).json();
+            if (["done", "error"].includes(d.status)) { clearInterval(t); res(d) }
+          }, 700);
+        });
+        const s = await wait();
+        ensureStepSucceeded(s, "Pack regeneration failed");
+        packData = s.pack_files || [];
+        if (!packData.length) {
+          throw new Error("No packs were generated. Check warnings and try again.");
+        }
+        renderPacks(packData);
+        switchTab("packs", document.getElementById("tab-packs"));
+      } catch (err) {
+        alert(err?.message || "Pack regeneration failed.");
+      } finally {
+        btns.forEach(b => { if (b) { b.textContent = "↻ Regenerate"; b.disabled = false } });
+      }
     }
 
     // ── Custom Pack Builder ───────────────────────────────────────────────────
@@ -1340,13 +3094,13 @@
         const t = q.topic || "Unknown";
         const s = q.subtopic || "Unknown";
         if (!topicMap[t]) topicMap[t] = {};
-        topicMap[t][s] = (topicMap[t][s]||0) + 1;
+        topicMap[t][s] = (topicMap[t][s] || 0) + 1;
       }
 
       for (const [topic, subtopics] of Object.entries(topicMap)) {
-        const color = TOPIC_COLORS[topic]||TOPIC_COLORS.Unknown;
-        const totalQ = Object.values(subtopics).reduce((a,b)=>a+b,0);
-        const groupId = `tg-${topic.replace(/\s+/g,"-")}`;
+        const color = TOPIC_COLORS[topic] || TOPIC_COLORS.Unknown;
+        const totalQ = Object.values(subtopics).reduce((a, b) => a + b, 0);
+        const groupId = `tg-${topic.replace(/\s+/g, "-")}`;
 
         const div = document.createElement("div");
         div.className = "topic-group glass";
@@ -1360,7 +3114,7 @@
           </div>
           <div class="subtopic-list">
             <div class="subtopic-chip-row">
-              ${Object.entries(subtopics).sort((a,b)=>b[1]-a[1]).map(([sub,cnt])=>`
+              ${Object.entries(subtopics).sort((a, b) => b[1] - a[1]).map(([sub, cnt]) => `
                 <div class="subtopic-chip" data-topic="${topic}" data-subtopic="${sub}"
                   style="--chip-color:${color}"
                   onclick="toggleSubtopic(this,'${topic}','${sub}')">
@@ -1379,7 +3133,7 @@
 
     function toggleSubtopic(chip, topic, subtopic) {
       if (!selectedSubtopics[topic]) selectedSubtopics[topic] = new Set();
-      const color = TOPIC_COLORS[topic]||TOPIC_COLORS.Unknown;
+      const color = TOPIC_COLORS[topic] || TOPIC_COLORS.Unknown;
       if (selectedSubtopics[topic].has(subtopic)) {
         selectedSubtopics[topic].delete(subtopic);
         chip.classList.remove("selected");
@@ -1399,7 +3153,7 @@
       for (const [topic, subs] of Object.entries(selectedSubtopics)) {
         totalSel += subs.size;
         for (const q of poolData) {
-          if (q.topic===topic && subs.has(q.subtopic||"Unknown")) {
+          if (q.topic === topic && subs.has(q.subtopic || "Unknown")) {
             totalQ++; totalM += q.marks;
           }
         }
@@ -1410,8 +3164,8 @@
         statsEl.style.display = "flex";
         buildBtn.style.display = "block";
         document.getElementById("bs-sel").textContent = totalSel;
-        document.getElementById("bs-q").textContent   = totalQ;
-        document.getElementById("bs-m").textContent   = "~" + Math.min(totalM, 100);
+        document.getElementById("bs-q").textContent = totalQ;
+        document.getElementById("bs-m").textContent = "~" + Math.min(totalM, 100);
       } else {
         statsEl.style.display = "none";
         buildBtn.style.display = "none";
@@ -1430,8 +3184,8 @@
 
       try {
         const r = await apiFetch(`/api/custom-pack/${jobId}`, {
-          method:"POST", headers:{"Content-Type":"application/json"},
-          body: JSON.stringify({ topics, target_marks:100 })
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ topics, target_marks: 100 })
         });
         const d = await r.json();
         if (d.error) throw new Error(d.error);
@@ -1440,11 +3194,11 @@
         // Reset selection
         selectedSubtopics = {};
         document.querySelectorAll(".subtopic-chip.selected").forEach(c => {
-          c.classList.remove("selected"); c.style.background=""; c.style.color="";
+          c.classList.remove("selected"); c.style.background = ""; c.style.color = "";
         });
         updateBuilderStats();
         switchTab("packs", document.getElementById("tab-packs"));
-      } catch(e) {
+      } catch (e) {
         alert("Could not build pack: " + e.message);
       }
       btn.textContent = "Build Custom Pack"; btn.disabled = false;
@@ -1452,7 +3206,7 @@
 
     // ── Session ───────────────────────────────────────────────────────────────
     async function saveSession() {
-      const r = await apiFetch(`/api/session/save/${jobId}`, { method:"POST" });
+      const r = await apiFetch(`/api/session/save/${jobId}`, { method: "POST" });
       const d = await r.json();
       if (d.saved) alert(`Session saved (${d.questions} questions)`);
     }
@@ -1480,7 +3234,7 @@
         } else {
           document.getElementById("rotate-key-note").textContent = d.error || "Rotation failed.";
         }
-      } catch(e) {
+      } catch (e) {
         document.getElementById("rotate-key-note").textContent = "Network error. Try again.";
       }
 
@@ -1496,7 +3250,7 @@
         setTimeout(() => {
           btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>`;
         }, 2000);
-      } catch(e) {}
+      } catch (e) { }
     }
 
     function newSession() {
@@ -1505,7 +3259,7 @@
 
     async function openSessionPicker() {
       const picker = document.getElementById("session-picker");
-      const list   = document.getElementById("session-list");
+      const list = document.getElementById("session-list");
       picker.style.display = picker.style.display === "none" ? "block" : "none";
       if (picker.style.display === "none") return;
       const d = await (await apiFetch("/api/session/list")).json();
@@ -1518,38 +3272,46 @@
         <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;background:rgba(255,255,255,0.55);border:1px solid rgba(0,0,0,0.07)">
           <div style="flex:1">
             <div style="font-size:13px;font-weight:600;color:var(--text-primary)">${s.questions} questions · ${s.marks} marks</div>
-            <div style="font-size:11px;color:var(--text-secondary);margin-top:2px">${s.classified?"Classified":"Not classified"} · ${s.jid}</div>
+            <div style="font-size:11px;color:var(--text-secondary);margin-top:2px">${s.classified ? "Classified" : "Not classified"} · ${s.jid}</div>
           </div>
           <button onclick="loadSession('${s.filename}')" style="padding:6px 14px;border-radius:20px;background:rgba(30,30,30,0.85);color:white;border:none;font-size:12px;font-weight:600;cursor:pointer">Load</button>
         </div>`).join("");
     }
 
     async function loadSession(filename) {
-      const r = await apiFetch("/api/session/load/" + filename, { method:"POST" });
-      const d = await r.json();
-      if (d.error) { alert("Could not load: " + d.error); return; }
-      jobId = d.job_id;
-      poolData = [];
-      const pr = await (await apiFetch("/api/pool/" + jobId)).json();
-      poolData = pr.pool || [];
-      document.getElementById("s-papers")?.textContent && (document.getElementById("s-papers").textContent = "—");
-      showScreen("screen-pipeline");
-      setProgress(0.85);
-      document.getElementById("pipeline-headline").textContent = "Ready";
-      document.getElementById("pipeline-sub").textContent = `${pr.total_questions} questions loaded from session`;
-      doneStep("scan"); doneStep("extract");
-      if (d.classified) doneStep("classify");
-      document.getElementById("step-generate").classList.add("active");
-      document.getElementById("sn-generate").classList.add("active");
-      await apiFetch("/api/generate/" + jobId, {
-        method:"POST", headers:{"Content-Type":"application/json"},
-        body: JSON.stringify({ balance_topics:true, diff_filter:[1,5] })
-      });
-      await pollStep("generating","generate","bar-generate","msg-generate",0.85,1.0);
-      const s = await (await apiFetch("/api/status/" + jobId)).json();
-      packData = s.pack_files || [];
-      doneStep("generate"); setProgress(1.0);
-      setTimeout(() => revealApp(), 600);
+      try {
+        const r = await apiFetch("/api/session/load/" + filename, { method: "POST" });
+        const d = await r.json();
+        if (d.error) { alert("Could not load: " + d.error); return; }
+        jobId = d.job_id;
+        poolData = [];
+        const pr = await (await apiFetch("/api/pool/" + jobId)).json();
+        poolData = pr.pool || [];
+        document.getElementById("s-papers")?.textContent && (document.getElementById("s-papers").textContent = "—");
+        showScreen("screen-pipeline");
+        setProgress(0.85);
+        document.getElementById("pipeline-headline").textContent = "Ready";
+        document.getElementById("pipeline-sub").textContent = `${pr.total_questions} questions loaded from session`;
+        doneStep("scan"); doneStep("extract");
+        if (d.classified) doneStep("classify");
+        document.getElementById("step-generate").classList.add("active");
+        document.getElementById("sn-generate").classList.add("active");
+        await apiFetch("/api/generate/" + jobId, {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ balance_topics: true, diff_filter: [1, 5] })
+        });
+        const generateResult = await pollStep("generating", "generate", "bar-generate", "msg-generate", 0.85, 1.0);
+        ensureStepSucceeded(generateResult, "Pack generation failed");
+        const s = await (await apiFetch("/api/status/" + jobId)).json();
+        packData = s.pack_files || [];
+        if (!packData.length) {
+          throw new Error("Session loaded but no packs were generated.");
+        }
+        doneStep("generate"); setProgress(1.0);
+        setTimeout(() => revealApp(), 600);
+      } catch (err) {
+        alert(err?.message || "Could not load session.");
+      }
     }
 
     // ── Sliders ───────────────────────────────────────────────────────────────
@@ -1578,7 +3340,7 @@
           document.getElementById("missing-key-banner").classList.remove("visible");
           updateKeyDisplay();
         }
-      } catch(e) {}
+      } catch (e) { }
       btn.textContent = "Recover Key"; btn.disabled = false;
     }
 
@@ -1600,8 +3362,8 @@
         const val = parseInt(inp.value);
         if (isNaN(val)) continue;
         scores.push({
-          key:   inp.dataset.qKey,
-          q:     parseInt(inp.dataset.qNum),
+          key: inp.dataset.qKey,
+          q: parseInt(inp.dataset.qNum),
           score: Math.max(0, Math.min(val, parseInt(inp.dataset.max))),
         });
       }
@@ -1610,7 +3372,7 @@
       btn.textContent = "Saving…"; btn.disabled = true;
       try {
         const r = await apiFetch(`/api/scores/${jobId}/${packNum}`, {
-          method: "POST", headers: {"Content-Type":"application/json"},
+          method: "POST", headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ scores })
         });
         const d = await r.json();
@@ -1619,18 +3381,18 @@
           const pack = packData.find(p => p.pack_num === packNum);
           if (pack) {
             pack.attempted = true;
-            const total = scores.reduce((a,s) => a + s.score, 0);
-            const max   = scores.reduce((a,s) => {
+            const total = scores.reduce((a, s) => a + s.score, 0);
+            const max = scores.reduce((a, s) => {
               const q = poolData.find(q => q.key === s.key && q.q === s.q);
               return a + (q ? q.marks : 0);
             }, 0);
             pack.score_pct = max ? Math.round(total / max * 100) : 0;
-            pack.attempt_date = new Date().toISOString().slice(0,10);
+            pack.attempt_date = new Date().toISOString().slice(0, 10);
           }
           renderPacks(packData);   // re-render to show badge
           section.classList.remove("visible");
         }
-      } catch(e) { alert("Could not save scores."); }
+      } catch (e) { alert("Could not save scores."); }
       btn.textContent = "Save Marks"; btn.disabled = false;
     }
 
@@ -1642,7 +3404,7 @@
         const d = await r.json();
         renderTopicProgress(d.topic_progress || {});
         renderPaperStats(d.paper_stats || []);
-      } catch(e) {}
+      } catch (e) { }
     }
 
     function renderTopicProgress(tp) {
@@ -1653,18 +3415,18 @@
         el.innerHTML = `<div class="empty-state"><div class="empty-icon">📊</div><div class="empty-title">No scores yet</div><div class="empty-sub">Enter marks after completing a pack</div></div>`;
         return;
       }
-      el.innerHTML = entries.sort((a,b) => a[1].avg_pct - b[1].avg_pct).map(([topic, data]) => {
+      el.innerHTML = entries.sort((a, b) => a[1].avg_pct - b[1].avg_pct).map(([topic, data]) => {
         const color = TOPIC_COLORS[topic] || TOPIC_COLORS.Unknown;
-        const pct   = data.avg_pct || 0;
+        const pct = data.avg_pct || 0;
         const barColor = pct >= 70 ? "#34C759" : pct >= 50 ? "#FF9500" : "#FF3B30";
         const subtopicRows = Object.entries(data.subtopics || {})
-          .sort((a,b) => a[1].avg_pct - b[1].avg_pct)
+          .sort((a, b) => a[1].avg_pct - b[1].avg_pct)
           .map(([sub, sd]) => `
             <div class="subtopic-progress-row">
               <div class="subtopic-progress-name">${sub}</div>
-              <div class="subtopic-pct" style="color:${sd.avg_pct>=70?"#34C759":sd.avg_pct>=50?"#FF9500":"#FF3B30"}">${sd.avg_pct}%</div>
+              <div class="subtopic-pct" style="color:${sd.avg_pct >= 70 ? "#34C759" : sd.avg_pct >= 50 ? "#FF9500" : "#FF3B30"}">${sd.avg_pct}%</div>
             </div>`).join("");
-        const subId = `sub-prog-${topic.replace(/\s+/g,"-")}`;
+        const subId = `sub-prog-${topic.replace(/\s+/g, "-")}`;
         return `
           <div class="progress-topic-row" onclick="this.classList.toggle('expanded');document.getElementById('${subId}').classList.toggle('open')">
             <div class="progress-topic-dot" style="background:${color}"></div>
@@ -1685,8 +3447,8 @@
         el.innerHTML = `<div class="empty-state" style="padding:16px 0"><div class="empty-title" style="font-size:14px">No paper data yet</div></div>`;
         return;
       }
-      el.innerHTML = attempted.sort((a,b) => (a.avg_pct||101) - (b.avg_pct||101)).map(s => {
-        const pct   = s.avg_pct;
+      el.innerHTML = attempted.sort((a, b) => (a.avg_pct || 101) - (b.avg_pct || 101)).map(s => {
+        const pct = s.avg_pct;
         const color = pct >= 70 ? "#34C759" : pct >= 50 ? "#FF9500" : "#FF3B30";
         return `<div class="paper-stats-row">
           <div class="paper-key-text">${s.key}</div>
@@ -1710,7 +3472,7 @@
         const r = await apiFetch("/api/attempts");
         const d = await r.json();
         serverAttempts = d.attempts || [];
-      } catch(e) {}
+      } catch (e) { }
 
       if (!local.length && !serverAttempts.length) {
         el.innerHTML = `<div class="empty-state"><div class="empty-icon">🕐</div><div class="empty-title">No attempts yet</div><div class="empty-sub">Complete a pack and enter your marks</div></div>`;
@@ -1719,24 +3481,24 @@
 
       // Local packs (session)
       const localCards = local.map(pack => {
-        const pct   = pack.score_pct || 0;
+        const pct = pack.score_pct || 0;
         const color = pct >= 70 ? "#34C759" : pct >= 50 ? "#FF9500" : "#FF3B30";
         return `<div class="history-card glass">
           <div class="history-card-body">
             <div class="history-score-circle" style="background:${color}">${pct}%</div>
             <div class="history-info">
-              <div class="history-pack-name">Pack ${pack.pack_num}${pack.custom?' (Custom)':''}</div>
-              <div class="history-meta">${pack.total_marks} marks · ${pack.question_count} questions · ${pack.attempt_date||'today'}</div>
+              <div class="history-pack-name">Pack ${pack.pack_num}${pack.custom ? ' (Custom)' : ''}</div>
+              <div class="history-meta">${pack.total_marks} marks · ${pack.question_count} questions · ${pack.attempt_date || 'today'}</div>
             </div>
           </div>
         </div>`;
       }).join("");
 
       // Server history
-      const serverCards = serverAttempts.slice(0,20).map(a => {
-        const pct   = a.pct || 0;
+      const serverCards = serverAttempts.slice(0, 20).map(a => {
+        const pct = a.pct || 0;
         const color = pct >= 70 ? "#34C759" : pct >= 50 ? "#FF9500" : "#FF3B30";
-        const date  = a.created_at ? new Date(a.created_at).toLocaleDateString() : "—";
+        const date = a.created_at ? new Date(a.created_at).toLocaleDateString() : "—";
         return `<div class="history-card glass">
           <div class="history-card-body">
             <div class="history-score-circle" style="background:${color}">${pct}%</div>
@@ -1756,45 +3518,46 @@
 
   <script>
     // ── Animated mesh background ──────────────────────────────────────────────
-    (function() {
+    (function () {
       const canvas = document.getElementById("mesh-canvas");
-      const ctx    = canvas.getContext("2d");
+      const ctx = canvas.getContext("2d");
       let W, H, points, t = 0;
-      const BASE   = "#f0f0f0";
-      const COLORS = ["rgba(228,228,228,0.6)","rgba(215,215,215,0.5)","rgba(235,235,235,0.7)","rgba(220,220,220,0.55)","rgba(210,210,210,0.45)"];
+      const BASE = "#f0f0f0";
+      const COLORS = ["rgba(228,228,228,0.6)", "rgba(215,215,215,0.5)", "rgba(235,235,235,0.7)", "rgba(220,220,220,0.55)", "rgba(210,210,210,0.45)"];
 
-      function resize() { W=canvas.width=window.innerWidth; H=canvas.height=window.innerHeight; initPoints() }
+      function resize() { W = canvas.width = window.innerWidth; H = canvas.height = window.innerHeight; initPoints() }
       function initPoints() {
-        const cols=5, rows=4; points=[];
-        for (let r=0;r<=rows;r++) for (let c=0;c<=cols;c++) points.push({
-          bx:(c/cols)*W, by:(r/rows)*H,
-          ox:(Math.random()-0.5)*W*0.18, oy:(Math.random()-0.5)*H*0.18,
-          px:Math.random()*Math.PI*2, py:Math.random()*Math.PI*2,
-          sx:0.00018+Math.random()*0.00012, sy:0.00015+Math.random()*0.00012,
+        const cols = 5, rows = 4; points = [];
+        for (let r = 0; r <= rows; r++) for (let c = 0; c <= cols; c++) points.push({
+          bx: (c / cols) * W, by: (r / rows) * H,
+          ox: (Math.random() - 0.5) * W * 0.18, oy: (Math.random() - 0.5) * H * 0.18,
+          px: Math.random() * Math.PI * 2, py: Math.random() * Math.PI * 2,
+          sx: 0.00018 + Math.random() * 0.00012, sy: 0.00015 + Math.random() * 0.00012,
         });
       }
-      function getPos(p,t) { return { x:p.bx+Math.sin(t*p.sx+p.px)*p.ox, y:p.by+Math.cos(t*p.sy+p.py)*p.oy } }
+      function getPos(p, t) { return { x: p.bx + Math.sin(t * p.sx + p.px) * p.ox, y: p.by + Math.cos(t * p.sy + p.py) * p.oy } }
       function draw() {
-        ctx.fillStyle=BASE; ctx.fillRect(0,0,W,H);
-        const cols=5, rows=4;
-        for (let r=0;r<rows;r++) for (let c=0;c<cols;c++) {
-          const i00=r*(cols+1)+c, i10=r*(cols+1)+(c+1), i01=(r+1)*(cols+1)+c, i11=(r+1)*(cols+1)+(c+1);
-          const p00=getPos(points[i00],t), p10=getPos(points[i10],t), p01=getPos(points[i01],t), p11=getPos(points[i11],t);
-          const cx=(p00.x+p10.x+p01.x+p11.x)/4, cy=(p00.y+p10.y+p01.y+p11.y)/4;
-          const color=COLORS[(r*cols+c)%COLORS.length];
-          const grad=ctx.createRadialGradient(cx,cy,0,cx,cy,Math.max(W,H)*0.28);
-          grad.addColorStop(0,color); grad.addColorStop(1,"rgba(240,240,240,0)");
+        ctx.fillStyle = BASE; ctx.fillRect(0, 0, W, H);
+        const cols = 5, rows = 4;
+        for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
+          const i00 = r * (cols + 1) + c, i10 = r * (cols + 1) + (c + 1), i01 = (r + 1) * (cols + 1) + c, i11 = (r + 1) * (cols + 1) + (c + 1);
+          const p00 = getPos(points[i00], t), p10 = getPos(points[i10], t), p01 = getPos(points[i01], t), p11 = getPos(points[i11], t);
+          const cx = (p00.x + p10.x + p01.x + p11.x) / 4, cy = (p00.y + p10.y + p01.y + p11.y) / 4;
+          const color = COLORS[(r * cols + c) % COLORS.length];
+          const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(W, H) * 0.28);
+          grad.addColorStop(0, color); grad.addColorStop(1, "rgba(240,240,240,0)");
           ctx.beginPath();
-          ctx.moveTo(p00.x,p00.y);
-          ctx.bezierCurveTo((p00.x+p10.x)/2,(p00.y+p10.y)/2,(p10.x+p11.x)/2,(p10.y+p11.y)/2,p11.x,p11.y);
-          ctx.bezierCurveTo((p11.x+p01.x)/2,(p11.y+p01.y)/2,(p01.x+p00.x)/2,(p01.y+p00.y)/2,p00.x,p00.y);
-          ctx.fillStyle=grad; ctx.fill();
+          ctx.moveTo(p00.x, p00.y);
+          ctx.bezierCurveTo((p00.x + p10.x) / 2, (p00.y + p10.y) / 2, (p10.x + p11.x) / 2, (p10.y + p11.y) / 2, p11.x, p11.y);
+          ctx.bezierCurveTo((p11.x + p01.x) / 2, (p11.y + p01.y) / 2, (p01.x + p00.x) / 2, (p01.y + p00.y) / 2, p00.x, p00.y);
+          ctx.fillStyle = grad; ctx.fill();
         }
-        t+=16; requestAnimationFrame(draw);
+        t += 16; requestAnimationFrame(draw);
       }
       window.addEventListener("resize", resize);
       resize(); draw();
     })();
   </script>
 </body>
+
 </html>

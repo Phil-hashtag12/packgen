@@ -413,6 +413,9 @@ def heatmap(jid):
 def generate(jid):
     data = request.json or {}
 
+    # Capture user_id from request context before entering the thread
+    _user_id_for_generate = g.job.get("user_id") if g.job else None
+
     def run():
         update_job(jid, status="generating", progress=0, message="Building packs…")
         pool = get_live_pool(jid)
@@ -420,7 +423,7 @@ def generate(jid):
             update_job(jid, status="error", message="No questions — extract first."); return
 
         # Spaced repetition: apply weakness weights if user has score data
-        user_id = g.job.get("user_id") if g.job else None
+        user_id = _user_id_for_generate
         weights = None
         if user_id and data.get("spaced_repetition", False):
             weights = weakness_weights(user_id, pool)
@@ -446,6 +449,8 @@ def generate(jid):
                        message=f"Writing pack {i}/{len(packs)}…")
             try:
                 qf, mf, total_marks, topic_counts, est_time = build_pack_pdfs(pack, i, out_dir)
+                if not qf.exists() or not mf.exists():
+                    raise RuntimeError("Generated PDF files were not written to disk")
                 pack_files.append({
                     "pack_num": i, "total_marks": total_marks,
                     "question_count": len(pack), "topics": topic_counts,
@@ -457,8 +462,25 @@ def generate(jid):
                 job_warnings.append(f"Pack {i} error: {e}")
                 log.error("Pack %d error: %s", i, e)
 
+        if not pack_files:
+            update_job(
+                jid,
+                status="error",
+                progress=100,
+                message="Pack generation failed. No output files were created.",
+                pack_files=[],
+                warnings=job_warnings,
+            )
+            log.error("Job %s: all pack builds failed (%d attempted)", jid, len(packs))
+            return
+
+        failed_count = len(packs) - len(pack_files)
+        done_message = f"Generated {len(pack_files)} packs."
+        if failed_count > 0:
+            done_message += f" ({failed_count} failed - see warnings.)"
+
         update_job(jid, status="done", progress=100,
-                   message=f"Generated {len(pack_files)} packs.",
+                   message=done_message,
                    pack_files=pack_files, warnings=job_warnings)
         log.info("Job %s: generated %d packs", jid, len(pack_files))
     threading.Thread(target=run, daemon=True, name=f"generate-{jid}").start()
@@ -496,7 +518,7 @@ def custom_pack(jid):
         return jsonify({"error": "No questions match difficulty filter."}), 400
 
     # Spaced repetition weighting
-    user_id = g.job.get("user_id") if g.job else None
+    user_id = get_job(jid).get("user_id") if job_exists(jid) else None
     if use_sr and user_id:
         weights = weakness_weights(user_id, candidates)
         import random
