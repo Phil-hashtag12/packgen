@@ -2,8 +2,8 @@
 classifier.py — Ultra token-efficient question classifier.
 
 Supports two backends, selected by environment variable:
-  AI_BACKEND=openrouter  →  OpenRouter API (any model, default: google/gemini-flash-1.5-8b)
-  AI_BACKEND=anthropic   →  Anthropic API  (default: claude-haiku-4-5-20251001)
+  AI_BACKEND=openrouter  →  OpenRouter API (any model, default: nvidia/nemotron-3-super-120b-a12b:free)
+  AI_BACKEND=anthropic   →  Anthropic API  (default: nvidia/nemotron-3-super-120b-a12b:free)
 
 OpenRouter is cheaper for text-only classification. Anthropic is used as
 fallback if OPENROUTER_API_KEY is not set.
@@ -28,13 +28,13 @@ AI_BACKEND         = os.environ.get("AI_BACKEND", "openrouter").lower()
 OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY", "")
 ANTHROPIC_API_KEY  = os.environ.get("ANTHROPIC_API_KEY", "")
 
-# OpenRouter: cheapest capable text model; vision model for diagram Qs
-OR_TEXT_MODEL   = os.environ.get("OR_TEXT_MODEL",   "google/gemini-flash-1.5-8b")
-OR_VISION_MODEL = os.environ.get("OR_VISION_MODEL", "google/gemini-flash-1.5")
+# OpenRouter model defaults
+OR_TEXT_MODEL   = os.environ.get("OR_TEXT_MODEL",   "nvidia/nemotron-3-super-120b-a12b:free")
+OR_VISION_MODEL = os.environ.get("OR_VISION_MODEL", "nvidia/nemotron-3-super-120b-a12b:free")
 OR_URL          = "https://openrouter.ai/api/v1/chat/completions"
 
 # Anthropic
-AN_TEXT_MODEL   = os.environ.get("AN_TEXT_MODEL",   "claude-haiku-4-5-20251001")
+AN_TEXT_MODEL   = os.environ.get("AN_TEXT_MODEL",   "nvidia/nemotron-3-super-120b-a12b:free")
 AN_URL          = "https://api.anthropic.com/v1/messages"
 
 BATCH_SIZE = 16   # questions per API call

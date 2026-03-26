@@ -358,9 +358,20 @@ def classify(jid):
         try:
             pool        = get_live_pool(jid)
             current_job = get_job(jid)
-            if current_job.get("classified") and not data.get("force"):
+            usable_labels = sum(1 for q in pool if (q.get("topic") or "Unknown") != "Unknown")
+            if current_job.get("classified") and not data.get("force") and usable_labels > 0:
                 update_job(jid, status="classified", progress=100,
                            message=f"Using {len(pool)} cached classifications."); return
+            log.info(
+                "Job %s: classify start backend=%s model=%s vision_model=%s pool=%d force=%s usable_labels=%d",
+                jid,
+                _classifier.AI_BACKEND,
+                _classifier.OR_TEXT_MODEL,
+                _classifier.OR_VISION_MODEL,
+                len(pool),
+                bool(data.get("force")),
+                usable_labels,
+            )
             user_id = current_job.get("user_id")
             if user_id and os.environ.get("SUPABASE_URL"):
                 profile = get_user_profile(user_id)
