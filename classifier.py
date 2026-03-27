@@ -291,6 +291,11 @@ def _single_vision_prompt(q: dict, txt: str) -> str:
 
 def _expand_topic(t: str) -> str:
     """Map short codes and freeform to canonical topic names."""
+    if t is None:
+        return "Unknown"
+    if not isinstance(t, str):
+        t = str(t)
+
     mapping = {
         "num": "Number", "number": "Number",
         "alg": "Algebra", "algebra": "Algebra",
@@ -299,8 +304,60 @@ def _expand_topic(t: str) -> str:
         "prob": "Probability", "probability": "Probability",
         "calc": "Calculus", "calculus": "Calculus",
     }
-    t_lower = t.strip().lower()
-    return mapping.get(t_lower, t if t in _VALID_TOPICS else "Unknown")
+    t_clean = re.sub(r"[\n\r\t]+", " ", t).strip()
+    if t_clean in _VALID_TOPICS:
+        return t_clean
+
+    # Handle outputs like "Num: Fractions" or "Algebra - equations"
+    t_prefix = re.split(r"[:\-|/]", t_clean, maxsplit=1)[0].strip().lower()
+    if t_prefix in mapping:
+        return mapping[t_prefix]
+
+    t_lower = t_clean.lower()
+    if t_lower in mapping:
+        return mapping[t_lower]
+
+    # Keyword fallbacks for freer model outputs
+    keyword_map = {
+        "number": "Number",
+        "fraction": "Number",
+        "decimal": "Number",
+        "percentage": "Number",
+        "ratio": "Number",
+        "indices": "Number",
+        "surd": "Number",
+        "algebra": "Algebra",
+        "equation": "Algebra",
+        "inequal": "Algebra",
+        "sequence": "Algebra",
+        "function": "Algebra",
+        "quadratic": "Algebra",
+        "geometry": "Geometry",
+        "angle": "Geometry",
+        "circle": "Geometry",
+        "trig": "Geometry",
+        "vector": "Geometry",
+        "coordinate": "Geometry",
+        "volume": "Geometry",
+        "statistics": "Statistics",
+        "histogram": "Statistics",
+        "box plot": "Statistics",
+        "scatter": "Statistics",
+        "frequency": "Statistics",
+        "probability": "Probability",
+        "venn": "Probability",
+        "tree diagram": "Probability",
+        "combined events": "Probability",
+        "calculus": "Calculus",
+        "differentiat": "Calculus",
+        "tangent": "Calculus",
+        "turning point": "Calculus",
+    }
+    for kw, topic in keyword_map.items():
+        if kw in t_lower:
+            return topic
+
+    return "Unknown"
 
 
 def _apply(questions: list, results: list):
