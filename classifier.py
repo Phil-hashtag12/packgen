@@ -100,6 +100,10 @@ def _render_b64(item, dpi=88) -> str | None:
 
 
 def _parse_json_array(raw: str) -> list:
+    if raw is None:
+        return []
+    if not isinstance(raw, str):
+        raw = str(raw)
     raw = re.sub(r"^```(?:json)?\s*|\s*```$", "", raw.strip())
     m = re.search(r'\[.*\]', raw, re.DOTALL)
     if m:
@@ -114,6 +118,10 @@ def _parse_json_array(raw: str) -> list:
 
 
 def _parse_json_obj(raw: str) -> dict:
+    if raw is None:
+        return {}
+    if not isinstance(raw, str):
+        raw = str(raw)
     raw = re.sub(r"^```(?:json)?\s*|\s*```$", "", raw.strip())
     try:
         return json.loads(raw)
@@ -142,7 +150,23 @@ def _call_openrouter(messages: list, model: str, max_tokens: int,
 
     resp = requests.post(OR_CHAT_URL, headers=headers, json=chat_payload, timeout=90)
     if resp.status_code < 400:
-        return resp.json()["choices"][0]["message"]["content"]
+        data = resp.json()
+        msg = ((data.get("choices") or [{}])[0]).get("message", {})
+        content = msg.get("content")
+        if isinstance(content, str):
+            return content
+        if isinstance(content, list):
+            parts = []
+            for item in content:
+                if isinstance(item, dict) and isinstance(item.get("text"), str):
+                    parts.append(item["text"])
+            if parts:
+                return "\n".join(parts)
+        # Some providers return text in alternative fields
+        alt = ((data.get("choices") or [{}])[0]).get("text")
+        if isinstance(alt, str):
+            return alt
+        raise RuntimeError("OpenRouter chat call returned no text content.")
 
     # Fallback for providers/accounts that only expose the Responses API route.
     if resp.status_code == 404:
