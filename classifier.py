@@ -2,6 +2,7 @@
 classifier.py — Ultra token-efficient question classifier.
 
 Supports two backends, selected by environment variable:
+  AI_BACKEND=mistral     →  Mistral API    (default: mistral-small-latest)
   AI_BACKEND=openrouter  →  OpenRouter API (any model, default: openrouter/auto)
   AI_BACKEND=anthropic   →  Anthropic API  (default: claude-haiku-4-5-20251001)
 
@@ -24,9 +25,15 @@ from packer import SPEC_TOPICS
 log = logging.getLogger("packgen.classifier")
 
 # ── Backend selection ─────────────────────────────────────────────────────────
-AI_BACKEND         = os.environ.get("AI_BACKEND", "openrouter").lower()
+AI_BACKEND         = os.environ.get("AI_BACKEND", "mistral").lower()
+MISTRAL_API_KEY    = os.environ.get("MISTRAL_API_KEY", "")
 OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY", "")
 ANTHROPIC_API_KEY  = os.environ.get("ANTHROPIC_API_KEY", "")
+
+# Mistral
+MI_TEXT_MODEL   = os.environ.get("MI_TEXT_MODEL",   "mistral-small-latest")
+MI_VISION_MODEL = os.environ.get("MI_VISION_MODEL", "mistral-small-latest")
+MI_URL          = "https://api.mistral.ai/v1/chat/completions"
 
 # OpenRouter model defaults
 OR_TEXT_MODEL   = os.environ.get("OR_TEXT_MODEL",   "openrouter/auto")
@@ -238,15 +245,91 @@ def _call_anthropic(messages: list, system: str, max_tokens: int,
     return resp.json()["content"][0]["text"]
 
 
+def _call_mistral(messages: list, model: str, max_tokens: int, api_key: str) -> str:
+    key = api_key.strip() or MISTRAL_API_KEY
+    if not key:
+        raise ValueError("No MISTRAL_API_KEY set")
+
+    # Mistral chat expects text content; convert multimodal-style arrays to text.
+    norm_messages = []
+    for m in messages:
+        role = m.get("role", "user")
+        content = m.get("content", "")
+        if isinstance(content, list):
+            txt_parts = []
+            for item in content:
+                if isinstance(item, dict) and isinstance(item.get("text"), str):
+                    if item["text"].strip():
+                        txt_parts.append(item["text"])
+            content = "\n".join(txt_parts).strip()
+        elif content is None:
+            content = ""
+        elif not isinstance(content, str):
+            content = str(content)
+        norm_messages.append({"role": role, "content": content})
+
+    payload = {
+        "model": model,
+        "messages": norm_messages,
+        "temperature": 0,
+        "max_tokens": max_tokens,
+    }
+    resp = requests.post(
+        MI_URL,
+        headers={
+            "Authorization": f"Bearer {key}",
+            "Content-Type": "application/json",
+        },
+        json=payload,
+        timeout=90,
+    )
+    if resp.status_code >= 400:
+        body = (resp.text or "").strip()
+        if len(body) > 500:
+            body = body[:500] + "..."
+        raise RuntimeError(
+            f"Mistral error {resp.status_code} at {MI_URL}. "
+            f"Model={model}. Response={body or '<empty>'}"
+        )
+
+    data = resp.json()
+    msg = ((data.get("choices") or [{}])[0]).get("message", {})
+    content = msg.get("content")
+    if isinstance(content, str) and content.strip():
+        return content
+    if isinstance(content, dict) and isinstance(content.get("text"), str):
+        txt = content.get("text", "")
+        if txt.strip():
+            return txt
+    if isinstance(content, list):
+        parts = []
+        for item in content:
+            if isinstance(item, dict) and isinstance(item.get("text"), str):
+                t = item["text"]
+                if t.strip():
+                    parts.append(t)
+        if parts:
+            return "\n".join(parts)
+    raise RuntimeError("Mistral call returned no text content.")
+
+
 def _llm_call(messages: list, system: str, max_tokens: int,
               api_key: str, vision: bool = False) -> str:
     """Route to the configured backend."""
     backend = AI_BACKEND
-    # Auto-fall-through: if configured backend key is missing, try the other
-    if backend == "openrouter" and not (api_key.strip() or OPENROUTER_API_KEY):
-        backend = "anthropic"
-    elif backend == "anthropic" and not (api_key.strip() or ANTHROPIC_API_KEY):
-        backend = "openrouter"
+    # Auto-fall-through: if configured backend key is missing, try other backends.
+    has_req_key = bool(api_key.strip())
+    if backend == "mistral" and not (has_req_key or MISTRAL_API_KEY):
+        backend = "openrouter" if OPENROUTER_API_KEY else "anthropic"
+    elif backend == "openrouter" and not (has_req_key or OPENROUTER_API_KEY):
+        backend = "mistral" if MISTRAL_API_KEY else "anthropic"
+    elif backend == "anthropic" and not (has_req_key or ANTHROPIC_API_KEY):
+        backend = "mistral" if MISTRAL_API_KEY else "openrouter"
+
+    if backend == "mistral":
+        model = MI_VISION_MODEL if vision else MI_TEXT_MODEL
+        full_messages = ([{"role": "system", "content": system}] if system else []) + messages
+        return _call_mistral(full_messages, model, max_tokens, api_key)
 
     if backend == "openrouter":
         model = OR_VISION_MODEL if vision else OR_TEXT_MODEL

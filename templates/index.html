@@ -2260,19 +2260,19 @@
         </div>
       </div>
 
-      <!-- Anthropic API key (optional BYO) -->
+      <!-- AI API key (optional BYO) -->
       <div style="margin-top:12px">
         <div class="step-card glass">
           <div class="step-body" style="display:block">
-            <div style="font-size:13px;font-weight:600;color:var(--text-primary);margin-bottom:4px">Your Anthropic Key
+            <div style="font-size:13px;font-weight:600;color:var(--text-primary);margin-bottom:4px">Your AI Provider Key
               <span style="font-weight:400;color:var(--text-secondary)">(optional)</span></div>
             <div style="font-size:12px;color:var(--text-secondary);margin-bottom:10px;line-height:18px">Provide your own
               <code
-                style="font-family:monospace;background:rgba(0,0,0,0.06);padding:1px 5px;border-radius:4px">sk-ant-...</code>
-              key to bypass the monthly quota and use your own Anthropic credits.</div>
+                style="font-family:monospace;background:rgba(0,0,0,0.06);padding:1px 5px;border-radius:4px">Mistral / OpenRouter / Anthropic key</code>
+              to bypass app quota and use your own provider credits.</div>
             <input
               style="width:100%;padding:10px 12px;border-radius:10px;border:1px solid rgba(0,0,0,0.12);background:rgba(255,255,255,0.7);font-family:monospace;font-size:12px;outline:none"
-              type="password" id="user-api-key" placeholder="sk-ant-api03-...">
+              type="password" id="user-api-key" placeholder="MISTRAL_API_KEY / sk-or-v1 / sk-ant-...">
           </div>
         </div>
       </div>
@@ -2665,10 +2665,14 @@
           console.log("[PackGen][AI] runtime config", {
             env_ai_backend: aiCfg.env_ai_backend,
             classifier_ai_backend: aiCfg.classifier_ai_backend,
+            has_mistral_env_key: aiCfg.has_mistral_env_key,
             has_openrouter_env_key: aiCfg.has_openrouter_env_key,
             has_anthropic_env_key: aiCfg.has_anthropic_env_key,
+            classifier_has_mistral_key: aiCfg.classifier_has_mistral_key,
             classifier_has_openrouter_key: aiCfg.classifier_has_openrouter_key,
             classifier_has_anthropic_key: aiCfg.classifier_has_anthropic_key,
+            mi_text_model: aiCfg.mi_text_model,
+            mi_vision_model: aiCfg.mi_vision_model,
             or_text_model: aiCfg.or_text_model,
             or_vision_model: aiCfg.or_vision_model,
             user_supplied_key_present: !!userKey,

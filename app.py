@@ -173,9 +173,10 @@ def health():
 def config():
     # NOTE: only expose what the frontend needs for auth — no secrets
     return jsonify({
-        "has_api_key":   bool(os.environ.get("ANTHROPIC_API_KEY", "").strip() or
+        "has_api_key":   bool(os.environ.get("MISTRAL_API_KEY", "").strip() or
+                              os.environ.get("ANTHROPIC_API_KEY", "").strip() or
                               os.environ.get("OPENROUTER_API_KEY", "").strip()),
-        "ai_backend":    os.environ.get("AI_BACKEND", "openrouter"),
+        "ai_backend":    os.environ.get("AI_BACKEND", "mistral"),
         "auth_enabled":  bool(os.environ.get("SUPABASE_URL", "")),
         "supabase_url":  os.environ.get("SUPABASE_URL", ""),
         "supabase_anon": os.environ.get("SUPABASE_ANON_KEY", ""),
@@ -190,10 +191,14 @@ def debug_ai():
     return jsonify({
         "env_ai_backend": os.environ.get("AI_BACKEND", ""),
         "classifier_ai_backend": _classifier.AI_BACKEND,
+        "has_mistral_env_key": bool(os.environ.get("MISTRAL_API_KEY", "").strip()),
         "has_openrouter_env_key": bool(os.environ.get("OPENROUTER_API_KEY", "").strip()),
         "has_anthropic_env_key": bool(os.environ.get("ANTHROPIC_API_KEY", "").strip()),
+        "classifier_has_mistral_key": bool((_classifier.MISTRAL_API_KEY or "").strip()),
         "classifier_has_openrouter_key": bool((_classifier.OPENROUTER_API_KEY or "").strip()),
         "classifier_has_anthropic_key": bool((_classifier.ANTHROPIC_API_KEY or "").strip()),
+        "mi_text_model": _classifier.MI_TEXT_MODEL,
+        "mi_vision_model": _classifier.MI_VISION_MODEL,
         "or_text_model": _classifier.OR_TEXT_MODEL,
         "or_vision_model": _classifier.OR_VISION_MODEL,
     })
@@ -342,7 +347,7 @@ def classify(jid):
     data = request.json or {}
     job  = g.job
 
-    # Resolve AI key: request body (BYO) → user profile → env (Anthropic/OpenRouter)
+    # Resolve AI key: request body (BYO) → user profile → env (Mistral/OpenRouter/Anthropic)
     ai_key = ""
     if not ai_key:
         ai_key = data.get("api_key", "").strip()
@@ -351,7 +356,8 @@ def classify(jid):
         if not ai_key:
             ai_key = profile.get("anthropic_api_key", "").strip()
     if not ai_key:
-        ai_key = (os.environ.get("OPENROUTER_API_KEY", "") or
+        ai_key = (os.environ.get("MISTRAL_API_KEY", "") or
+                  os.environ.get("OPENROUTER_API_KEY", "") or
                   os.environ.get("ANTHROPIC_API_KEY", ""))
 
     def run():
@@ -361,6 +367,8 @@ def classify(jid):
             usable_labels = sum(1 for q in pool if (q.get("topic") or "Unknown") != "Unknown")
             ai_debug = {
                 "backend": _classifier.AI_BACKEND,
+                "mi_text_model": _classifier.MI_TEXT_MODEL,
+                "mi_vision_model": _classifier.MI_VISION_MODEL,
                 "or_text_model": _classifier.OR_TEXT_MODEL,
                 "or_vision_model": _classifier.OR_VISION_MODEL,
                 "pool_size": len(pool),
@@ -1006,7 +1014,7 @@ def admin():
         "active_jobs": active_jobs,
         "users":       users_count,
         "total_classifications_this_month": total_usage,
-        "ai_backend":  os.environ.get("AI_BACKEND", "openrouter"),
+        "ai_backend":  os.environ.get("AI_BACKEND", "mistral"),
         "uptime_pid":  os.getpid(),
     })
 
