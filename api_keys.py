@@ -19,13 +19,14 @@ Rate limit tiers (per hour, checked in store.check_rate_limit):
 """
 
 import os, secrets, hashlib, time, logging
-import requests as req
+from supabase import create_client, Client
 from store import check_rate_limit, REDIS_AVAILABLE
 
 log = logging.getLogger(__name__)
 
 SUPABASE_URL     = os.environ.get("SUPABASE_URL", "")
 SUPABASE_SERVICE = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
+SUPABASE_ANON    = os.environ.get("SUPABASE_ANON_KEY", "")
 
 # Rate limits: (requests, window_seconds)
 RATE_LIMITS = {
@@ -38,14 +39,24 @@ RATE_LIMITS = {
 _key_cache:  dict[str, dict] = {}
 _key_cache_ts: dict[str, float] = {}
 KEY_CACHE_TTL = 300
+_sb_client: Client | None = None
 
 
-def _sb_headers():
-    return {
-        "apikey":        SUPABASE_SERVICE,
-        "Authorization": f"Bearer {SUPABASE_SERVICE}",
-        "Content-Type":  "application/json",
-    }
+def _get_supabase_client() -> Client | None:
+    global _sb_client
+    if _sb_client is not None:
+        return _sb_client
+    if not SUPABASE_URL:
+        return None
+    api_key = (SUPABASE_SERVICE or SUPABASE_ANON or "").strip()
+    if not api_key:
+        return None
+    try:
+        _sb_client = create_client(SUPABASE_URL, api_key)
+        return _sb_client
+    except Exception:
+        log.exception("Failed to initialize Supabase client in api_keys")
+        return None
 
 
 # ── Key generation ────────────────────────────────────────────────────────────
@@ -70,19 +81,21 @@ def provision_user_key(user_id: str, plan: str = "free") -> str:
     key_hash   = hash_key(raw_key)
     key_prefix = raw_key[:12]   # "pg-live-abcd" — for display
 
-    if SUPABASE_URL:
+    sb = _get_supabase_client()
+    if sb:
         try:
-            req.patch(
-                f"{SUPABASE_URL}/rest/v1/packgen_profiles",
-                headers=_sb_headers(),
-                params={"user_id": f"eq.{user_id}"},
-                json={
+            # Upsert ensures the profile row exists for brand new OAuth users.
+            sb.table("packgen_profiles").upsert(
+                {
+                    "user_id":            user_id,
+                    "plan":               plan,
+                    "usage_this_month":   0,
                     "packgen_key_hash":   key_hash,
                     "packgen_key_prefix": key_prefix,
-                    "key_created_at":     "now()",
+                    # Let DB default trigger/time set created_at if present.
                 },
-                timeout=10,
-            )
+                on_conflict="user_id",
+            ).execute()
         except Exception as e:
             log.error("Failed to store key for user %s: %s", user_id, e)
 
@@ -115,7 +128,8 @@ def validate_packgen_key(raw_key: str) -> dict | None:
             return cached
         # Expired — fall through to DB
 
-    if not SUPABASE_URL:
+    sb = _get_supabase_client()
+    if not sb:
         # Dev mode — accept any pg- key
         profile = {
             "user_id":          "dev",
@@ -128,13 +142,8 @@ def validate_packgen_key(raw_key: str) -> dict | None:
         return profile
 
     try:
-        r = req.get(
-            f"{SUPABASE_URL}/rest/v1/packgen_profiles",
-            headers=_sb_headers(),
-            params={"packgen_key_hash": f"eq.{key_hash}", "select": "*"},
-            timeout=8,
-        )
-        rows = r.json() if r.status_code == 200 else []
+        res = sb.table("packgen_profiles").select("*").eq("packgen_key_hash", key_hash).limit(1).execute()
+        rows = (res.data or []) if hasattr(res, "data") else []
         if rows:
             profile = rows[0]
             _key_cache[key_hash]    = profile

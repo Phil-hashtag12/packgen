@@ -5,3 +5,4 @@ gunicorn>=21.2.0
 redis>=5.0.0
 sentry-sdk[flask]>=1.45.0
 Pillow>=10.0.0
+supabase>=2.4.0
