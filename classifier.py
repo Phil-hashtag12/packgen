@@ -31,7 +31,8 @@ ANTHROPIC_API_KEY  = os.environ.get("ANTHROPIC_API_KEY", "")
 # OpenRouter model defaults
 OR_TEXT_MODEL   = os.environ.get("OR_TEXT_MODEL",   "openrouter/auto")
 OR_VISION_MODEL = os.environ.get("OR_VISION_MODEL", "openrouter/auto")
-OR_URL          = "https://openrouter.ai/api/v1/chat/completions"
+OR_CHAT_URL       = "https://openrouter.ai/api/v1/chat/completions"
+OR_RESPONSES_URL  = "https://openrouter.ai/api/v1/responses"
 
 # Anthropic
 AN_TEXT_MODEL   = os.environ.get("AN_TEXT_MODEL",   "claude-haiku-4-5-20251001")
@@ -126,19 +127,60 @@ def _call_openrouter(messages: list, model: str, max_tokens: int,
     key = api_key.strip() or OPENROUTER_API_KEY
     if not key:
         raise ValueError("No OPENROUTER_API_KEY set")
-    resp = requests.post(OR_URL, headers={
+    headers = {
         "Authorization": f"Bearer {key}",
         "Content-Type":  "application/json",
         "HTTP-Referer":  "https://packgen.app",
         "X-Title":       "PackGen",
-    }, json={
+    }
+    chat_payload = {
         "model":      model,
         "messages":   messages,
         "max_tokens": max_tokens,
         "temperature": 0,
-    }, timeout=90)
-    resp.raise_for_status()
-    return resp.json()["choices"][0]["message"]["content"]
+    }
+
+    resp = requests.post(OR_CHAT_URL, headers=headers, json=chat_payload, timeout=90)
+    if resp.status_code < 400:
+        return resp.json()["choices"][0]["message"]["content"]
+
+    # Fallback for providers/accounts that only expose the Responses API route.
+    if resp.status_code == 404:
+        responses_payload = {
+            "model": model,
+            "input": messages,
+            "max_output_tokens": max_tokens,
+            "temperature": 0,
+        }
+        resp2 = requests.post(
+            OR_RESPONSES_URL, headers=headers, json=responses_payload, timeout=90
+        )
+        if resp2.status_code < 400:
+            data = resp2.json()
+            if isinstance(data.get("output_text"), str) and data["output_text"].strip():
+                return data["output_text"]
+            for out in data.get("output", []) or []:
+                for c in out.get("content", []) or []:
+                    txt = c.get("text")
+                    if isinstance(txt, str) and txt.strip():
+                        return txt
+            raise RuntimeError("OpenRouter responses call succeeded but returned no text content.")
+
+        body2 = (resp2.text or "").strip()
+        if len(body2) > 500:
+            body2 = body2[:500] + "..."
+        raise RuntimeError(
+            f"OpenRouter error {resp2.status_code} at {OR_RESPONSES_URL}. "
+            f"Model={model}. Response={body2 or '<empty>'}"
+        )
+
+    body = (resp.text or "").strip()
+    if len(body) > 500:
+        body = body[:500] + "..."
+    raise RuntimeError(
+        f"OpenRouter error {resp.status_code} at {OR_CHAT_URL}. "
+        f"Model={model}. Response={body or '<empty>'}"
+    )
 
 
 def _call_anthropic(messages: list, system: str, max_tokens: int,
