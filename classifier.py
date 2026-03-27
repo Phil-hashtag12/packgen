@@ -148,28 +148,30 @@ def _call_openrouter(messages: list, model: str, max_tokens: int,
         "temperature": 0,
     }
 
-    resp = requests.post(OR_CHAT_URL, headers=headers, json=chat_payload, timeout=90)
-    if resp.status_code < 400:
-        data = resp.json()
+    def _extract_chat_text(data: dict) -> str | None:
         msg = ((data.get("choices") or [{}])[0]).get("message", {})
         content = msg.get("content")
-        if isinstance(content, str):
+        if isinstance(content, str) and content.strip():
             return content
+        if isinstance(content, dict) and isinstance(content.get("text"), str):
+            txt = content.get("text", "")
+            if txt.strip():
+                return txt
         if isinstance(content, list):
             parts = []
             for item in content:
                 if isinstance(item, dict) and isinstance(item.get("text"), str):
-                    parts.append(item["text"])
+                    t = item["text"]
+                    if t.strip():
+                        parts.append(t)
             if parts:
                 return "\n".join(parts)
-        # Some providers return text in alternative fields
         alt = ((data.get("choices") or [{}])[0]).get("text")
-        if isinstance(alt, str):
+        if isinstance(alt, str) and alt.strip():
             return alt
-        raise RuntimeError("OpenRouter chat call returned no text content.")
+        return None
 
-    # Fallback for providers/accounts that only expose the Responses API route.
-    if resp.status_code == 404:
+    def _call_responses() -> str:
         responses_payload = {
             "model": model,
             "input": messages,
@@ -189,7 +191,6 @@ def _call_openrouter(messages: list, model: str, max_tokens: int,
                     if isinstance(txt, str) and txt.strip():
                         return txt
             raise RuntimeError("OpenRouter responses call succeeded but returned no text content.")
-
         body2 = (resp2.text or "").strip()
         if len(body2) > 500:
             body2 = body2[:500] + "..."
@@ -197,6 +198,19 @@ def _call_openrouter(messages: list, model: str, max_tokens: int,
             f"OpenRouter error {resp2.status_code} at {OR_RESPONSES_URL}. "
             f"Model={model}. Response={body2 or '<empty>'}"
         )
+
+    resp = requests.post(OR_CHAT_URL, headers=headers, json=chat_payload, timeout=90)
+    if resp.status_code < 400:
+        data = resp.json()
+        txt = _extract_chat_text(data)
+        if txt is not None:
+            return txt
+        # Some providers return 200 with non-text chat payloads; try responses API.
+        return _call_responses()
+
+    # Fallback for providers/accounts that only expose the Responses API route.
+    if resp.status_code == 404:
+        return _call_responses()
 
     body = (resp.text or "").strip()
     if len(body) > 500:
