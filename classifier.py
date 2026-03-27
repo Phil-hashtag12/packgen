@@ -377,6 +377,37 @@ def _has_usable_labels(batch: list) -> bool:
     return any((q.get("topic") or "Unknown") != "Unknown" for q in batch)
 
 
+def _coerce_result_from_raw(raw: str) -> dict:
+    """
+    Best-effort extraction when model doesn't return strict JSON.
+    """
+    if raw is None:
+        return {}
+    if not isinstance(raw, str):
+        raw = str(raw)
+    txt = raw.strip()
+    if not txt:
+        return {}
+
+    topic = _expand_topic(txt)
+
+    # Try extracting a likely difficulty marker (e.g. "difficulty: 3")
+    d = 3
+    m = re.search(r"(?:difficulty|diff|level)\D*([1-5])", txt, re.I)
+    if not m:
+        m = re.search(r"\b([1-5])\b", txt)
+    if m:
+        d = _safe_int(m.group(1), 3)
+
+    # Lightweight subtopic extraction
+    first = txt.splitlines()[0][:120]
+    first = re.sub(r"[`*#>\[\]\{\}]", "", first).strip()
+    if len(first) < 3:
+        first = "Unknown"
+
+    return {"t": topic, "s": first, "d": d}
+
+
 def _classify_batch_single_fallback(batch: list, api_key: str):
     """
     Retry classification one-by-one with strict object output when a batch
@@ -396,6 +427,8 @@ def _classify_batch_single_fallback(batch: list, api_key: str):
                 arr = _parse_json_array(raw)
                 if arr and isinstance(arr[0], dict):
                     r = arr[0]
+            if not r:
+                r = _coerce_result_from_raw(raw)
             if isinstance(r, dict) and (r.get("t") or r.get("topic")):
                 raw_t = r.get("t") or r.get("topic") or "Unknown"
                 q["topic"] = _expand_topic(raw_t)

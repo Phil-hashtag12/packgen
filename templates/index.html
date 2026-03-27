@@ -2660,12 +2660,40 @@
         document.getElementById("pipeline-headline").textContent = "Classifying…";
         document.getElementById("pipeline-sub").textContent = "AI is reading every question";
         const userKey = document.getElementById("user-api-key")?.value || "";
+        try {
+          const aiCfg = await (await apiFetch("/api/debug/ai")).json();
+          console.log("[PackGen][AI] runtime config", {
+            env_ai_backend: aiCfg.env_ai_backend,
+            classifier_ai_backend: aiCfg.classifier_ai_backend,
+            has_openrouter_env_key: aiCfg.has_openrouter_env_key,
+            has_anthropic_env_key: aiCfg.has_anthropic_env_key,
+            classifier_has_openrouter_key: aiCfg.classifier_has_openrouter_key,
+            classifier_has_anthropic_key: aiCfg.classifier_has_anthropic_key,
+            or_text_model: aiCfg.or_text_model,
+            or_vision_model: aiCfg.or_vision_model,
+            user_supplied_key_present: !!userKey,
+          });
+        } catch (cfgErr) {
+          console.warn("[PackGen][AI] could not fetch runtime config", cfgErr);
+        }
         await apiFetch(`/api/classify/${jobId}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ api_key: userKey }) });
         const classifyResult = await pollStep("classifying", "classify", "bar-classify", "msg-classify", 0.65, 0.85);
         ensureStepSucceeded(classifyResult, "Classification failed");
 
         const pr2 = await (await apiFetch(`/api/pool/${jobId}`)).json();
         poolData = pr2.pool || [];
+        const unknown = poolData.filter(q => !q.topic || q.topic === "Unknown").length;
+        const byTopic = poolData.reduce((acc, q) => {
+          const t = q.topic || "Unknown";
+          acc[t] = (acc[t] || 0) + 1;
+          return acc;
+        }, {});
+        console.log("[PackGen][AI] post-classify summary", {
+          total_questions: poolData.length,
+          unknown_questions: unknown,
+          classified_questions: poolData.length - unknown,
+          topic_distribution: byTopic,
+        });
         doneStep("classify"); setProgress(0.85);
 
         activateStep("generate");
@@ -2727,6 +2755,15 @@
               message: d.message,
               warnings: d.warnings || [],
               pack_count: (d.pack_files || []).length,
+            });
+          }
+          if (stepId === "classify") {
+            console.log("[PackGen][AI] classify polling", {
+              status: d.status,
+              progress: d.progress,
+              message: d.message,
+              warnings: d.warnings || [],
+              ai_debug: d.ai_debug || {},
             });
           }
           const pct = d.progress || 0;

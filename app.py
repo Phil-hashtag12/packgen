@@ -359,6 +359,15 @@ def classify(jid):
             pool        = get_live_pool(jid)
             current_job = get_job(jid)
             usable_labels = sum(1 for q in pool if (q.get("topic") or "Unknown") != "Unknown")
+            ai_debug = {
+                "backend": _classifier.AI_BACKEND,
+                "or_text_model": _classifier.OR_TEXT_MODEL,
+                "or_vision_model": _classifier.OR_VISION_MODEL,
+                "pool_size": len(pool),
+                "usable_labels_before": usable_labels,
+                "force": bool(data.get("force")),
+            }
+            update_job(jid, ai_debug=ai_debug)
             if current_job.get("classified") and not data.get("force") and usable_labels > 0:
                 update_job(jid, status="classified", progress=100,
                            message=f"Using {len(pool)} cached classifications."); return
@@ -395,12 +404,15 @@ def classify(jid):
             classify_batch(pool, api_key=ai_key, spec_text=spec_text, progress_cb=prog)
 
             classified_count = sum(1 for q in pool if (q.get("topic") or "Unknown") != "Unknown")
+            ai_debug["usable_labels_after"] = classified_count
+            ai_debug["unknown_after"] = len(pool) - classified_count
             if pool and classified_count == 0:
                 update_job(
                     jid,
                     status="error",
                     progress=100,
                     message="Classification failed: provider returned no usable labels. Check your API key/backend and try again.",
+                    ai_debug=ai_debug,
                 )
                 return
 
@@ -409,11 +421,17 @@ def classify(jid):
             set_job_docs(jid, [], pool)
             update_job(jid, status="classified", progress=100,
                        message=f"Classified {len(pool)} questions.",
-                       pool=pool, classified=True)
+                       pool=pool, classified=True, ai_debug=ai_debug)
             log.info("Job %s: classified %d questions", jid, len(pool))
         except Exception as e:
             log.exception("Job %s: classify failed", jid)
-            update_job(jid, status="error", progress=100, message=f"Classification failed: {e}")
+            update_job(
+                jid,
+                status="error",
+                progress=100,
+                message=f"Classification failed: {e}",
+                ai_debug={"backend": _classifier.AI_BACKEND, "error": str(e)},
+            )
     threading.Thread(target=run, daemon=True, name=f"classify-{jid}").start()
     return jsonify({"started": True})
 
@@ -661,6 +679,7 @@ def status(jid):
         "pack_files": j.get("pack_files", []),
         "classified": j.get("classified", False),
         "warning_count": len(j.get("warnings", [])),
+        "ai_debug": j.get("ai_debug", {}),
     })
 
 
