@@ -316,6 +316,44 @@ def _apply(questions: list, results: list):
             q["difficulty"] = 3
 
 
+def _has_usable_labels(batch: list) -> bool:
+    return any((q.get("topic") or "Unknown") != "Unknown" for q in batch)
+
+
+def _classify_batch_single_fallback(batch: list, api_key: str):
+    """
+    Retry classification one-by-one with strict object output when a batch
+    response is unusable.
+    """
+    for q in batch:
+        try:
+            txt = _extract_text(q)
+            raw = _llm_call(
+                [{"role": "user", "content": _single_vision_prompt(q, txt)}],
+                system=_SYSTEM_SINGLE,
+                max_tokens=60,
+                api_key=api_key,
+            )
+            r = _parse_json_obj(raw)
+            if not r:
+                arr = _parse_json_array(raw)
+                if arr and isinstance(arr[0], dict):
+                    r = arr[0]
+            if isinstance(r, dict) and (r.get("t") or r.get("topic")):
+                raw_t = r.get("t") or r.get("topic") or "Unknown"
+                q["topic"] = _expand_topic(raw_t)
+                q["subtopic"] = r.get("s") or r.get("subtopic") or "Unknown"
+                q["difficulty"] = _safe_int(r.get("d") or r.get("difficulty"), 3)
+            else:
+                q.setdefault("topic", "Unknown")
+                q.setdefault("subtopic", "Unknown")
+                q.setdefault("difficulty", 3)
+        except Exception:
+            q.setdefault("topic", "Unknown")
+            q.setdefault("subtopic", "Unknown")
+            q.setdefault("difficulty", 3)
+
+
 # ── Public API ────────────────────────────────────────────────────────────────
 def classify_batch(questions: list, api_key: str = "", spec_text: str = "",
                    progress_cb=None) -> list:
@@ -356,8 +394,15 @@ def classify_batch(questions: list, api_key: str = "", spec_text: str = "",
                 api_key=api_key,
             )
             _apply(batch, _parse_json_array(raw))
+            if not _has_usable_labels(batch):
+                _classify_batch_single_fallback(batch, api_key)
             _cache_batch(batch)
-            api_success += 1
+            if _has_usable_labels(batch):
+                api_success += 1
+            else:
+                api_failures += 1
+                if not first_api_error:
+                    first_api_error = "Batch parse produced no usable labels."
         except Exception as e:
             log.error("Text batch classify error: %s", e)
             _default_batch(batch)
@@ -385,8 +430,15 @@ def classify_batch(questions: list, api_key: str = "", spec_text: str = "",
                     api_key=api_key,
                 )
                 _apply(text_ok, _parse_json_array(raw))
+                if not _has_usable_labels(text_ok):
+                    _classify_batch_single_fallback(text_ok, api_key)
                 _cache_batch(text_ok)
-                api_success += 1
+                if _has_usable_labels(text_ok):
+                    api_success += 1
+                else:
+                    api_failures += 1
+                    if not first_api_error:
+                        first_api_error = "Vision-text batch parse produced no usable labels."
             except Exception as e:
                 log.error("Vision-text batch error: %s", e)
                 _default_batch(text_ok)
