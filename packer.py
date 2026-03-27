@@ -139,8 +139,7 @@ def make_packs(pool, seed=None, topic_filter=None, difficulty_filter=None,
 def build_cover_page(pack_num, total_marks, pack,
                      paper_name="Edexcel International GCSE Mathematics (4MA1)") -> fitz.Document:
     """
-    Generate an exam-authentic A4 cover page.
-    Full width, proper margins, timing guidance, instructions, mark grid.
+    Generate a clean modern A4 cover page with exam-style structure.
     """
     doc = fitz.open()
     W, H = 595, 842   # A4
@@ -150,33 +149,30 @@ def build_cover_page(pack_num, total_marks, pack,
     MR = 545  # margin right (W - 50)
     CW = MR - ML  # content width = 495
 
-    # White background
+    # Base background
     page.draw_rect(fitz.Rect(0, 0, W, H), color=None, fill=(1, 1, 1))
 
-    # ── Header band ──────────────────────────────────────────────────────────
-    page.draw_rect(fitz.Rect(0, 0, W, 8), color=None, fill=(0, 0, 0))
+    # Top accent band
+    page.draw_rect(fitz.Rect(0, 0, W, 92), color=None, fill=(0.12, 0.13, 0.16))
+    page.draw_rect(fitz.Rect(0, 92, W, 100), color=None, fill=(0.36, 0.39, 0.45))
 
-    # Outer border
+    # Main frame
     page.draw_rect(fitz.Rect(ML - 5, 20, MR + 5, H - 20),
                    color=(0, 0, 0), fill=None, width=1)
 
-    # ── Examination board header ──────────────────────────────────────────────
-    y = 40
-    page.insert_text((ML, y), "Pearson Edexcel",
-                     fontsize=9, color=(0, 0, 0), fontname="Helvetica")
-    page.insert_text((ML, y + 13), "International GCSE",
-                     fontsize=9, color=(0, 0, 0), fontname="Helvetica")
+    # Header text in dark band
+    page.insert_text((ML, 34), "PackGen Generated Practice Paper",
+                     fontsize=10, color=(0.88, 0.9, 0.94), fontname="Helvetica-Bold")
+    page.insert_text((ML, 52), "Pearson Edexcel International GCSE Mathematics (4MA1)",
+                     fontsize=10, color=(0.84, 0.86, 0.9), fontname="Helvetica")
 
-    # Pack number top-right
-    page.insert_text((MR - 80, y), f"Practice Pack",
-                     fontsize=9, color=(0.4, 0.4, 0.4), fontname="Helvetica")
-    page.insert_text((MR - 40, y + 13), f"{pack_num:02d}",
-                     fontsize=22, color=(0, 0, 0), fontname="Helvetica-Bold")
+    page.insert_text((MR - 108, 34), "Practice Pack", fontsize=9,
+                     color=(0.78, 0.8, 0.86), fontname="Helvetica")
+    page.insert_text((MR - 56, 58), f"{pack_num:02d}", fontsize=26,
+                     color=(1, 1, 1), fontname="Helvetica-Bold")
 
-    # ── Title block ───────────────────────────────────────────────────────────
-    y = 90
-    page.draw_line((ML, y), (MR, y), color=(0, 0, 0), width=0.5)
-    y += 18
+    # Title block
+    y = 122
 
     page.insert_text((ML, y), "Mathematics",
                      fontsize=22, color=(0, 0, 0), fontname="Helvetica-Bold")
@@ -184,8 +180,8 @@ def build_cover_page(pack_num, total_marks, pack,
     page.insert_text((ML, y), "4MA1 — Higher Tier",
                      fontsize=13, color=(0, 0, 0), fontname="Helvetica")
     y += 14
-    page.insert_text((ML, y), "Practice Paper",
-                     fontsize=11, color=(0.4, 0.4, 0.4), fontname="Helvetica")
+    page.insert_text((ML, y), "Practice Paper (Higher Tier)",
+                     fontsize=11, color=(0.35, 0.35, 0.35), fontname="Helvetica")
 
     y += 20
     page.draw_line((ML, y), (MR, y), color=(0, 0, 0), width=0.5)
@@ -195,7 +191,8 @@ def build_cover_page(pack_num, total_marks, pack,
     est_time = estimate_time(pack)
     n_q = len(pack)
 
-    # Two-column info
+    # Two-column info panel
+    page.draw_rect(fitz.Rect(ML, y - 10, MR, y + 34), color=(0.82, 0.82, 0.82), fill=(0.97, 0.97, 0.98), width=0.6)
     col2 = ML + CW // 2
     page.insert_text((ML, y), "Time:",
                      fontsize=10, color=(0, 0, 0), fontname="Helvetica-Bold")
@@ -217,7 +214,7 @@ def build_cover_page(pack_num, total_marks, pack,
                      fontsize=10, color=(0, 0, 0), fontname="Helvetica")
 
     y += 20
-    page.draw_line((ML, y), (MR, y), color=(0.7, 0.7, 0.7), width=0.5)
+    page.draw_line((ML, y), (MR, y), color=(0.72, 0.72, 0.72), width=0.5)
 
     # ── Instructions ─────────────────────────────────────────────────────────
     y += 14
@@ -239,7 +236,7 @@ def build_cover_page(pack_num, total_marks, pack,
         y += 13
 
     y += 8
-    page.draw_line((ML, y), (MR, y), color=(0.7, 0.7, 0.7), width=0.5)
+    page.draw_line((ML, y), (MR, y), color=(0.72, 0.72, 0.72), width=0.5)
 
     # ── Topic breakdown ───────────────────────────────────────────────────────
     y += 14
@@ -279,7 +276,7 @@ def build_cover_page(pack_num, total_marks, pack,
         y += 16
 
     y += 8
-    page.draw_line((ML, y), (MR, y), color=(0.7, 0.7, 0.7), width=0.5)
+    page.draw_line((ML, y), (MR, y), color=(0.72, 0.72, 0.72), width=0.5)
 
     # ── Mark grid ─────────────────────────────────────────────────────────────
     y += 14
@@ -301,9 +298,9 @@ def build_cover_page(pack_num, total_marks, pack,
         if cy + cell_h > H - 60:
             break
 
-        # Cell border
+        # Cell border with softer fill
         page.draw_rect(fitz.Rect(cx, cy, cx + cell_w - 2, cy + cell_h - 2),
-                       color=(0.75, 0.75, 0.75), fill=(0.98, 0.98, 0.98), width=0.5)
+                       color=(0.77, 0.77, 0.77), fill=(0.985, 0.985, 0.99), width=0.5)
 
         # Q number
         page.insert_text((cx + 4, cy + 11),
@@ -317,7 +314,7 @@ def build_cover_page(pack_num, total_marks, pack,
     # ── Footer ────────────────────────────────────────────────────────────────
     page.draw_line((ML, H - 35), (MR, H - 35), color=(0.7, 0.7, 0.7), width=0.5)
     page.insert_text((ML, H - 22),
-                     f"PackGen — Practice Pack {pack_num:02d}  ·  {total_marks} marks  ·  For revision use only",
+                     f"PackGen · Practice Pack {pack_num:02d} · {total_marks} marks · For revision use only",
                      fontsize=7.5, color=(0.6, 0.6, 0.6), fontname="Helvetica")
 
     return doc

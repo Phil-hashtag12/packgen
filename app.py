@@ -14,7 +14,7 @@ New in v3:
 - OpenRouter + Anthropic classifier backend
 """
 
-import os, json, uuid, threading, base64, logging, time, re, zipfile, io
+import os, json, uuid, threading, base64, logging, time, re, zipfile, io, random
 from pathlib import Path, PurePosixPath
 from functools import wraps
 
@@ -588,91 +588,181 @@ def generate(jid):
 @app.route("/api/custom-pack/<jid>", methods=["POST"])
 @require_job
 def custom_pack(jid):
-    data             = request.json or {}
-    topic_selections = data.get("topics", [])
-    target_marks     = int(data.get("target_marks", 100))
-    diff_filter      = data.get("difficulty_filter")
-    use_sr           = data.get("spaced_repetition", False)
+    data         = request.json or {}
+    prompt       = (data.get("prompt") or "").strip()
+    pack_count   = max(1, min(int(data.get("pack_count", 1)), 8))
+    target_marks = max(40, min(int(data.get("target_marks", 100)), 200))
+    diff_filter  = data.get("difficulty_filter")
+    use_sr       = data.get("spaced_repetition", True)
+    legacy_topics = data.get("topics", [])
 
     pool = get_live_pool(jid)
     if not pool:
         return jsonify({"error": "No questions. Extract first."}), 400
 
+    def _pick_difficulty_from_prompt(text: str):
+        text = (text or "").lower()
+        if "easy" in text:
+            return (1, 2)
+        if any(k in text for k in ("hard", "harder", "challenging", "difficult")):
+            return (4, 5)
+        if "medium" in text:
+            return (2, 4)
+        m = re.search(r"difficulty\s*([1-5])(?:\s*[-to]+\s*([1-5]))?", text)
+        if m:
+            lo = int(m.group(1))
+            hi = int(m.group(2)) if m.group(2) else lo
+            return (min(lo, hi), max(lo, hi))
+        return None
+
+    def _question_matches_prompt(q: dict, text: str) -> bool:
+        if not text:
+            return False
+        blob = " ".join([
+            q.get("topic", ""),
+            q.get("subtopic", ""),
+            q.get("source_text", "")[:400],
+        ]).lower()
+        words = [w for w in re.findall(r"[a-z0-9\-\+]+", text.lower()) if len(w) >= 4]
+        if not words:
+            return False
+        hits = sum(1 for w in words if w in blob)
+        return hits >= 1
+
+    def _build_pack_from_candidates(cands: list[dict], tmarks: int, qweights: dict[str, float], used: set[tuple[str, int]]):
+        scored = []
+        for q in cands:
+            qk = (q.get("key"), q.get("q"))
+            if qk in used:
+                continue
+            wk = f"{q.get('key')}|{q.get('q')}"
+            weight = float(qweights.get(wk, 1.0))
+            scored.append((weight, q.get("marks", 0), random.random(), q))
+        scored.sort(key=lambda x: (-x[0], -x[1], x[2]))
+        chosen = []
+        marks = 0
+        for _, _, _, q in scored:
+            qm = int(q.get("marks", 0))
+            if marks + qm <= tmarks + 8:
+                chosen.append(q)
+                used.add((q.get("key"), q.get("q")))
+                marks += qm
+            if marks >= tmarks - 8:
+                break
+        return chosen, marks
+
+    user_id = get_job(jid).get("user_id") if job_exists(jid) else None
+    weights = weakness_weights(user_id, pool) if (use_sr and user_id) else {}
+
+    # Build initial candidates from prompt (chat-style), then fallback to legacy topic/subtopic filters.
     candidates = []
-    for sel in topic_selections:
-        t    = sel.get("topic", "")
-        subs = sel.get("subtopics", [])
-        for q in pool:
-            if q.get("topic") != t: continue
-            if subs and q.get("subtopic") not in subs: continue
-            candidates.append(q)
+    prompt_diff = _pick_difficulty_from_prompt(prompt) if prompt else None
+    effective_diff = tuple(diff_filter) if diff_filter else prompt_diff
+    wants_weak = any(k in prompt.lower() for k in ["struggle", "weak", "mistake", "wrong", "improve"]) if prompt else False
+
+    if prompt:
+        candidates = [q for q in pool if _question_matches_prompt(q, prompt)]
+        if not candidates and wants_weak and weights:
+            # If no lexical match, use weakest questions across the whole pool.
+            candidates = sorted(pool, key=lambda q: weights.get(f"{q['key']}|{q['q']}", 1.0), reverse=True)[:350]
+
+    if not candidates and legacy_topics:
+        for sel in legacy_topics:
+            t = sel.get("topic", "")
+            subs = sel.get("subtopics", [])
+            for q in pool:
+                if q.get("topic") != t:
+                    continue
+                if subs and q.get("subtopic") not in subs:
+                    continue
+                candidates.append(q)
 
     if not candidates:
-        return jsonify({"error": "No questions match selection."}), 400
-    if diff_filter:
-        lo, hi = diff_filter
+        candidates = list(pool)
+
+    # De-duplicate candidate list
+    seen = set()
+    deduped = []
+    for q in candidates:
+        qk = (q.get("key"), q.get("q"))
+        if qk in seen:
+            continue
+        seen.add(qk)
+        deduped.append(q)
+    candidates = deduped
+
+    if not candidates:
+        return jsonify({"error": "No questions match your request."}), 400
+
+    if effective_diff:
+        lo, hi = effective_diff
         candidates = [q for q in candidates if lo <= (q.get("difficulty") or 3) <= hi]
     if not candidates:
         return jsonify({"error": "No questions match difficulty filter."}), 400
 
-    # Spaced repetition weighting
-    user_id = get_job(jid).get("user_id") if job_exists(jid) else None
-    if use_sr and user_id:
-        weights = weakness_weights(user_id, candidates)
-        import random
-        keys   = [f"{q['key']}|{q['q']}" for q in candidates]
-        wts    = [weights.get(k, 1.0) for k in keys]
-        total  = sum(wts)
-        probs  = [w / total for w in wts]
-        # Weighted sample without replacement
-        indices = list(range(len(candidates)))
-        chosen, remaining_prob = [], list(probs)
-        for _ in range(len(candidates)):
-            if not indices: break
-            r   = random.random() * sum(remaining_prob)
-            acc = 0
-            for i, idx in enumerate(indices):
-                acc += remaining_prob[i]
-                if acc >= r:
-                    chosen.append(candidates[idx])
-                    indices.pop(i); remaining_prob.pop(i)
-                    break
-        candidates = chosen
-    else:
-        import random
-        random.shuffle(candidates)
-
-    pack, used_marks = [], 0
-    for q in candidates:
-        if used_marks + q["marks"] <= target_marks + 8:
-            pack.append(q); used_marks += q["marks"]
-        if used_marks >= target_marks - 8: break
-
-    if not pack:
-        return jsonify({"error": "Could not fill a pack."}), 400
-
-    job      = get_job(jid)
-    pack_num = len(job.get("pack_files", [])) + 1
-    out_dir  = OUTPUT_DIR / jid
+    job = get_job(jid)
+    out_dir = OUTPUT_DIR / jid
     out_dir.mkdir(exist_ok=True)
-
-    try:
-        qf, mf, total_marks, topic_counts, est_time = build_pack_pdfs(pack, pack_num, out_dir)
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-    pack_meta = {
-        "pack_num": pack_num, "total_marks": total_marks,
-        "question_count": len(pack), "topics": topic_counts,
-        "questions": pool_summary(pack),
-        "q_file": qf.name, "ms_file": mf.name,
-        "est_time": est_time, "custom": True,
-        "attempted": False, "attempt_date": None,
-    }
     current_packs = job.get("pack_files", [])
-    current_packs.append(pack_meta)
+    used_questions = set()
+    built_packs = []
+
+    for _ in range(pack_count):
+        pack, used_marks = _build_pack_from_candidates(candidates, target_marks, weights, used_questions)
+        if not pack:
+            break
+        pack_num = len(current_packs) + 1
+        try:
+            qf, mf, total_marks, topic_counts, est_time = build_pack_pdfs(pack, pack_num, out_dir)
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+
+        pack_meta = {
+            "pack_num": pack_num,
+            "total_marks": total_marks,
+            "question_count": len(pack),
+            "topics": topic_counts,
+            "questions": pool_summary(pack),
+            "q_file": qf.name,
+            "ms_file": mf.name,
+            "est_time": est_time,
+            "custom": True,
+            "attempted": False,
+            "attempt_date": None,
+        }
+        current_packs.append(pack_meta)
+        built_packs.append(pack_meta)
+
+    if not built_packs:
+        return jsonify({"error": "Could not build any packs with current request."}), 400
+
     update_job(jid, pack_files=current_packs)
-    return jsonify({"pack": pack_meta})
+
+    # Insights for chatbot-style UI
+    weak_breakdown = []
+    if user_id:
+        try:
+            progress = topic_progress(user_id)
+            for topic, pdata in progress.items():
+                for sub, sdata in (pdata.get("subtopics") or {}).items():
+                    weak_breakdown.append({
+                        "topic": topic,
+                        "subtopic": sub,
+                        "avg_pct": sdata.get("avg_pct", 0),
+                        "attempted": sdata.get("attempted", 0),
+                    })
+            weak_breakdown.sort(key=lambda x: (x["avg_pct"], -x["attempted"]))
+        except Exception:
+            weak_breakdown = []
+
+    return jsonify({
+        "pack": built_packs[0],           # backward compatibility
+        "packs": built_packs,
+        "insights": weak_breakdown[:8],
+        "matched_candidates": len(candidates),
+        "prompt": prompt,
+        "pack_count": len(built_packs),
+    })
 
 
 @app.route("/api/status/<jid>")

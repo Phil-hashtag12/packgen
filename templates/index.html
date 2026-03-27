@@ -1411,6 +1411,94 @@
       margin-bottom: 20px
     }
 
+    .builder-chat-box {
+      border-radius: 16px;
+      padding: 14px;
+      margin-bottom: 12px;
+      border: 1px solid rgba(0, 0, 0, 0.08)
+    }
+
+    .builder-field-label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin-bottom: 6px
+    }
+
+    .builder-query-input {
+      width: 100%;
+      min-height: 110px;
+      resize: vertical;
+      border-radius: 12px;
+      border: 1px solid rgba(0, 0, 0, 0.12);
+      background: rgba(255, 255, 255, 0.8);
+      color: var(--text-primary);
+      font-family: inherit;
+      font-size: 13px;
+      line-height: 18px;
+      padding: 10px 12px;
+      outline: none
+    }
+
+    .builder-query-input:focus {
+      border-color: rgba(58, 58, 60, 0.45);
+      box-shadow: 0 0 0 3px rgba(58, 58, 60, 0.12)
+    }
+
+    .builder-controls-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 10px
+    }
+
+    .builder-number-input {
+      width: 100%;
+      height: 38px;
+      border-radius: 10px;
+      border: 1px solid rgba(0, 0, 0, 0.12);
+      background: rgba(255, 255, 255, 0.82);
+      color: var(--text-primary);
+      font-size: 13px;
+      padding: 0 10px;
+      outline: none
+    }
+
+    .builder-number-input:focus {
+      border-color: rgba(58, 58, 60, 0.45);
+      box-shadow: 0 0 0 3px rgba(58, 58, 60, 0.12)
+    }
+
+    .builder-insights {
+      border-radius: 12px;
+      padding: 12px;
+      margin-bottom: 12px;
+      background: rgba(255, 255, 255, 0.66);
+      border: 1px solid rgba(0, 0, 0, 0.08)
+    }
+
+    .builder-insight-title {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 8px
+    }
+
+    .builder-insight-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 6px 0;
+      border-top: 1px solid rgba(0, 0, 0, 0.06);
+      font-size: 12px;
+      color: var(--text-secondary)
+    }
+
+    .builder-insight-row:first-of-type {
+      border-top: none
+    }
+
     .topic-group {
       border-radius: 16px;
       margin-bottom: 12px;
@@ -1521,9 +1609,7 @@
       margin-top: 2px
     }
 
-    #build-pack-btn {
-      display: none
-    }
+    #build-pack-btn {}
 
     /* Profile / session */
     .usage-bar-track {
@@ -2171,26 +2257,41 @@
       <div class="section-header">
         <div class="section-title">Custom Pack Builder</div>
       </div>
-      <p class="builder-intro">Select specific topics and subtopics. PackGen will assemble a ~100 mark pack from your
-        choices.</p>
-      <div id="builder-topic-groups"></div>
+      <p class="builder-intro">Describe what you want to practise and how many packs to build. PackGen targets weak
+        areas first.</p>
+      <div class="builder-chat-box glass">
+        <label class="builder-field-label" for="builder-query">What should PackGen focus on?</label>
+        <textarea id="builder-query" class="builder-query-input"
+          placeholder="Example: Make 2 packs focused on my weakest algebra and trigonometry questions, especially harder ones (difficulty 4-5)."></textarea>
+        <div class="builder-controls-row">
+          <div class="builder-control">
+            <label class="builder-field-label" for="builder-pack-count">Packs</label>
+            <input id="builder-pack-count" class="builder-number-input" type="number" min="1" max="8" value="1">
+          </div>
+          <div class="builder-control">
+            <label class="builder-field-label" for="builder-target-marks">Target marks</label>
+            <input id="builder-target-marks" class="builder-number-input" type="number" min="40" max="200" value="100">
+          </div>
+        </div>
+      </div>
+      <div id="builder-insights" class="builder-insights" style="display:none"></div>
       <div class="builder-footer">
-        <div class="builder-stats" id="builder-stats" style="display:none">
+        <div class="builder-stats" id="builder-stats" style="display:flex">
           <div class="builder-stat">
-            <div class="builder-stat-val" id="bs-sel">0</div>
-            <div class="builder-stat-label">Subtopics</div>
+            <div class="builder-stat-val" id="bs-sel">Prompt</div>
+            <div class="builder-stat-label">Mode</div>
           </div>
           <div class="builder-stat">
             <div class="builder-stat-val" id="bs-q">0</div>
-            <div class="builder-stat-label">Available Qs</div>
+            <div class="builder-stat-label">Matched Qs</div>
           </div>
           <div class="builder-stat">
             <div class="builder-stat-val" id="bs-m">0</div>
-            <div class="builder-stat-label">Est. marks</div>
+            <div class="builder-stat-label">Packs built</div>
           </div>
         </div>
-        <button class="cta-btn primary" id="build-pack-btn" onclick="buildCustomPack()" style="display:none">Build
-          Custom Pack</button>
+        <button class="cta-btn primary" id="build-pack-btn" onclick="buildCustomPack()">Build
+          Packs From Prompt</button>
       </div>
     </div>
 
@@ -2403,7 +2504,6 @@
     let pgKey = localStorage.getItem("pg_key") || "";
     let authUser = null;
     let authMode = "signin";
-    let selectedSubtopics = {};
     let previewCache = {};
     let previewTimer = null;
     let authEnabled = false;
@@ -3087,7 +3187,11 @@
           ta.select();
           const ok = document.execCommand("copy");
           document.body.removeChild(ta);
-          if (!ok) throw new Error("Clipboard copy blocked by browser");
+          copied = !!ok;
+        }
+        if (!copied) {
+          // Last-resort fallback so user can still copy on locked-down browsers.
+          window.prompt("Clipboard blocked by browser. Copy manually:", text);
         }
 
         btn.classList.add("copied");
@@ -3105,7 +3209,13 @@
             <path d="M18 16v4M16 18h4" stroke="rgba(175,82,222,0.9)" stroke-width="1.5"/>`;
         }, 2500);
       } catch (e) {
-        console.error("[PackGen] Copy context failed:", e);
+        console.error("[PackGen] Copy context failed:", {
+          message: e?.message || String(e),
+          name: e?.name || "Error",
+          secureContext: window.isSecureContext,
+          hasClipboardAPI: !!(navigator.clipboard && navigator.clipboard.writeText),
+          userAgent: navigator.userAgent,
+        });
         tip.textContent = "Copy failed — try again";
         tip.style.opacity = "1";
         setTimeout(() => { tip.style.opacity = ""; tip.textContent = "Copy context for AI" }, 2500);
@@ -3193,127 +3303,71 @@
 
     // ── Custom Pack Builder ───────────────────────────────────────────────────
     function buildCustomPackBuilder() {
-      const container = document.getElementById("builder-topic-groups");
-      container.innerHTML = "";
-      if (!poolData.length) {
-        container.innerHTML = '<div class="empty-state"><div class="empty-icon">🏗</div><div class="empty-title">No questions loaded</div><div class="empty-sub">Extract papers first</div></div>';
+      const queryEl = document.getElementById("builder-query");
+      if (!queryEl) return;
+      if (!queryEl.value.trim()) {
+        queryEl.value = "Build 1 pack from my weakest topics with mixed difficulty.";
+      }
+      document.getElementById("bs-sel").textContent = "Prompt";
+      document.getElementById("bs-q").textContent = poolData.length ? String(poolData.length) : "0";
+      document.getElementById("bs-m").textContent = "0";
+    }
+
+    function renderBuilderInsights(insights) {
+      const box = document.getElementById("builder-insights");
+      if (!box) return;
+      if (!insights || !insights.length) {
+        box.style.display = "none";
+        box.innerHTML = "";
         return;
       }
-
-      // Build topic → subtopic → question count map from pool
-      const topicMap = {};
-      for (const q of poolData) {
-        const t = q.topic || "Unknown";
-        const s = q.subtopic || "Unknown";
-        if (!topicMap[t]) topicMap[t] = {};
-        topicMap[t][s] = (topicMap[t][s] || 0) + 1;
-      }
-
-      for (const [topic, subtopics] of Object.entries(topicMap)) {
-        const color = TOPIC_COLORS[topic] || TOPIC_COLORS.Unknown;
-        const totalQ = Object.values(subtopics).reduce((a, b) => a + b, 0);
-        const groupId = `tg-${topic.replace(/\s+/g, "-")}`;
-
-        const div = document.createElement("div");
-        div.className = "topic-group glass";
-        div.id = groupId;
-        div.innerHTML = `
-          <div class="topic-group-header" onclick="toggleTopicGroup('${groupId}')">
-            <div class="topic-group-dot" style="background:${color}"></div>
-            <div class="topic-group-name">${topic}</div>
-            <div class="topic-group-count">${totalQ} q</div>
-            <div class="topic-group-arrow">▼</div>
+      box.style.display = "block";
+      box.innerHTML = `
+        <div class="builder-insight-title">Detected weak question types</div>
+        ${insights.map(i => `
+          <div class="builder-insight-row">
+            <div>${i.topic} · ${i.subtopic}</div>
+            <div>${i.avg_pct}% (${i.attempted} attempts)</div>
           </div>
-          <div class="subtopic-list">
-            <div class="subtopic-chip-row">
-              ${Object.entries(subtopics).sort((a, b) => b[1] - a[1]).map(([sub, cnt]) => `
-                <div class="subtopic-chip" data-topic="${topic}" data-subtopic="${sub}"
-                  style="--chip-color:${color}"
-                  onclick="toggleSubtopic(this,'${topic}','${sub}')">
-                  ${sub} <span style="opacity:0.6;font-size:10px">${cnt}</span>
-                </div>`).join("")}
-            </div>
-          </div>`;
-        container.appendChild(div);
-      }
-      updateBuilderStats();
-    }
-
-    function toggleTopicGroup(id) {
-      document.getElementById(id).classList.toggle("open");
-    }
-
-    function toggleSubtopic(chip, topic, subtopic) {
-      if (!selectedSubtopics[topic]) selectedSubtopics[topic] = new Set();
-      const color = TOPIC_COLORS[topic] || TOPIC_COLORS.Unknown;
-      if (selectedSubtopics[topic].has(subtopic)) {
-        selectedSubtopics[topic].delete(subtopic);
-        chip.classList.remove("selected");
-        chip.style.background = "";
-        chip.style.color = "";
-      } else {
-        selectedSubtopics[topic].add(subtopic);
-        chip.classList.add("selected");
-        chip.style.background = color;
-        chip.style.color = "white";
-      }
-      updateBuilderStats();
-    }
-
-    function updateBuilderStats() {
-      let totalSel = 0, totalQ = 0, totalM = 0;
-      for (const [topic, subs] of Object.entries(selectedSubtopics)) {
-        totalSel += subs.size;
-        for (const q of poolData) {
-          if (q.topic === topic && subs.has(q.subtopic || "Unknown")) {
-            totalQ++; totalM += q.marks;
-          }
-        }
-      }
-      const statsEl = document.getElementById("builder-stats");
-      const buildBtn = document.getElementById("build-pack-btn");
-      if (totalSel > 0) {
-        statsEl.style.display = "flex";
-        buildBtn.style.display = "block";
-        document.getElementById("bs-sel").textContent = totalSel;
-        document.getElementById("bs-q").textContent = totalQ;
-        document.getElementById("bs-m").textContent = "~" + Math.min(totalM, 100);
-      } else {
-        statsEl.style.display = "none";
-        buildBtn.style.display = "none";
-      }
+        `).join("")}
+      `;
     }
 
     async function buildCustomPack() {
       const btn = document.getElementById("build-pack-btn");
-      btn.textContent = "Building…"; btn.disabled = true;
-
-      const topics = [];
-      for (const [topic, subs] of Object.entries(selectedSubtopics)) {
-        if (subs.size > 0) topics.push({ topic, subtopics: [...subs] });
+      const query = (document.getElementById("builder-query")?.value || "").trim();
+      const packCount = parseInt(document.getElementById("builder-pack-count")?.value || "1");
+      const targetMarks = parseInt(document.getElementById("builder-target-marks")?.value || "100");
+      if (!query) {
+        alert("Add a prompt for the custom builder.");
+        return;
       }
-      if (!topics.length) { btn.textContent = "Build Custom Pack"; btn.disabled = false; return; }
+      btn.textContent = "Building…"; btn.disabled = true;
 
       try {
         const r = await apiFetch(`/api/custom-pack/${jobId}`, {
           method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ topics, target_marks: 100 })
+          body: JSON.stringify({
+            prompt: query,
+            pack_count: Math.max(1, Math.min(packCount || 1, 8)),
+            target_marks: Math.max(40, Math.min(targetMarks || 100, 200)),
+            spaced_repetition: true,
+          })
         });
         const d = await r.json();
         if (d.error) throw new Error(d.error);
-        packData.push(d.pack);
+        const newPacks = d.packs || (d.pack ? [d.pack] : []);
+        if (!newPacks.length) throw new Error("No packs returned.");
+        packData.push(...newPacks);
         renderPacks(packData);
-        // Reset selection
-        selectedSubtopics = {};
-        document.querySelectorAll(".subtopic-chip.selected").forEach(c => {
-          c.classList.remove("selected"); c.style.background = ""; c.style.color = "";
-        });
-        updateBuilderStats();
+        renderBuilderInsights(d.insights || []);
+        document.getElementById("bs-q").textContent = String(d.matched_candidates || 0);
+        document.getElementById("bs-m").textContent = String(d.pack_count || newPacks.length || 0);
         switchTab("packs", document.getElementById("tab-packs"));
       } catch (e) {
         alert("Could not build pack: " + e.message);
       }
-      btn.textContent = "Build Custom Pack"; btn.disabled = false;
+      btn.textContent = "Build Packs From Prompt"; btn.disabled = false;
     }
 
     // ── Session ───────────────────────────────────────────────────────────────
